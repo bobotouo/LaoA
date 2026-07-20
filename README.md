@@ -65,3 +65,12 @@ make run
 - `GET /api/health`
 - `GET /api/market/dashboard?refresh=false`
 - FastAPI 文档：`/docs`
+
+## 部署到 Vercel
+
+1. 推送仓库到 GitHub 后在 [vercel.com/new](https://vercel.com/new) 导入，或本地执行 `vercel --prod`
+2. 安装命令已使用 `uv pip install --system`（Vercel 的 Python 由 uv 托管，裸 `pip` 会报 `externally-managed-environment`）
+3. 前端构建输出到 `public/`，API 入口为 `api/index.py`，函数超时 60s
+
+注意：海外节点上 FinShare/通达信可能连不上，会自动回退东财接口。
+
