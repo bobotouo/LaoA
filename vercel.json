@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "uv pip install --system -r requirements.txt && cd frontend && npm install",
+  "installCommand": "cd frontend && npm install",
   "buildCommand": "bash scripts/vercel-build.sh",
   "functions": {
     "api/index.py": {
