@@ -33,11 +33,13 @@ service = MarketDataService(
 
 
 @app.get("/api/health")
+@app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.get("/api/market/dashboard")
+@app.get("/market/dashboard")
 def dashboard(refresh: bool = Query(default=False)) -> dict:
     try:
         return service.get_dashboard(refresh=refresh)

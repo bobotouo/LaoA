@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import threading
 from collections import defaultdict
 from typing import Any
@@ -70,21 +71,32 @@ class FinshareProvider:
         self._lock = threading.RLock()
         self._catalog: list[dict[str, Any]] | None = None
 
+        # TDX sockets are unreliable on Vercel/serverless; keep East Money only.
+        if os.getenv("VERCEL") or os.getenv("DISABLE_FINSHARE") == "1":
+            self.available = False
+            self.version = "disabled-on-serverless"
+            return
+
         if not self.available:
             return
 
-        import finshare
-        from finshare.sources import tdx_source
+        try:
+            import finshare
+            from finshare.sources import tdx_source
 
-        # FinShare ships a long public-server list. Keeping the recently
-        # verified hosts first avoids waiting through several stale servers.
-        tdx_source.TDX_SERVERS = [
-            ("115.238.56.198", 7709),
-            ("218.75.126.9", 7709),
-            ("101.227.73.20", 7709),
-        ]
-        self.version = getattr(finshare, "__version__", "unknown")
-        self._source = finshare.get_tdx_source()
+            # FinShare ships a long public-server list. Keeping the recently
+            # verified hosts first avoids waiting through several stale servers.
+            tdx_source.TDX_SERVERS = [
+                ("115.238.56.198", 7709),
+                ("218.75.126.9", 7709),
+                ("101.227.73.20", 7709),
+            ]
+            self.version = getattr(finshare, "__version__", "unknown")
+            self._source = finshare.get_tdx_source()
+        except Exception:
+            self.available = False
+            self._source = None
+            self.version = "init-failed"
 
     def market_snapshot_rows(self) -> list[dict[str, Any]]:
         if not self.available:
