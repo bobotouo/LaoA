@@ -1,7 +1,23 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Chart from "./components/Chart";
 import { useDashboard } from "./hooks/useDashboard";
 import { formatMoney, formatNumber, signed, trendClass } from "./lib/format";
+
+function useCompactLayout() {
+  const [compact, setCompact] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 760px)").matches : false,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const onChange = () => setCompact(media.matches);
+    onChange();
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  return compact;
+}
 
 const SERIES_COLORS = [
   "#e34545",
@@ -90,13 +106,13 @@ function pickSectorTooltipTarget(params, byName) {
   );
 }
 
-function buildSectorOption(sectors) {
+function buildSectorOption(sectors, { compact = false } = {}) {
   const longest = sectors.reduce(
     (result, sector) => (sector.series.length > result.length ? sector.series : result),
     [],
   );
   const times = longest.map((point) => point.time);
-  const maxChange = Math.max(...sectors.map((item) => item.changePct));
+  const maxChange = Math.max(...sectors.map((item) => item.changePct), 0);
   const byName = new Map(sectors.map((sector) => [sector.name, sector]));
   const aligned = sectors.map((sector) => {
     const values = new Map(sector.series.map((point) => [point.time, point.value]));
@@ -104,16 +120,15 @@ function buildSectorOption(sectors) {
       name: sector.name,
       type: "line",
       data: times.map((time) => values.get(time) ?? null),
-      // Keep symbols for hit-testing; hide them visually so dense lines stay clean.
       showSymbol: true,
       showAllSymbol: true,
       symbol: "circle",
-      symbolSize: 9,
+      symbolSize: compact ? 11 : 9,
       itemStyle: { opacity: 0 },
       connectNulls: true,
       triggerLineEvent: true,
       animationDurationUpdate: 350,
-      lineStyle: { width: sector.changePct === maxChange ? 2.4 : 1.6 },
+      lineStyle: { width: sector.changePct === maxChange ? 2.4 : compact ? 1.8 : 1.6 },
       emphasis: {
         focus: "series",
         blurScope: "coordinateSystem",
@@ -135,45 +150,60 @@ function buildSectorOption(sectors) {
       confine: false,
       hideDelay: 120,
       extraCssText:
-        "z-index:40;max-width:320px;padding:0;border:none;box-shadow:none;background:transparent;",
+        "z-index:40;max-width:min(320px,calc(100vw - 24px));padding:0;border:none;box-shadow:none;background:transparent;",
       formatter: (params) => {
         const target = pickSectorTooltipTarget(params, byName);
         if (!target) return "";
         return formatSectorTooltip(byName.get(target.seriesName), target.value);
       },
     },
-    legend: {
-      type: "scroll",
-      orient: "vertical",
-      right: 4,
-      top: 4,
-      bottom: 10,
-      itemWidth: 10,
-      itemHeight: 5,
-      textStyle: { color: "#536273", fontSize: 12 },
-      formatter: (name) => {
-        const sector = byName.get(name);
-        return `${name}  ${signed(sector?.changePct, 2)}%`;
-      },
-      tooltip: { show: true },
+    legend: { show: false },
+    grid: {
+      left: compact ? 40 : 52,
+      right: compact ? 12 : 18,
+      top: 16,
+      bottom: compact ? 28 : 34,
     },
-    grid: { left: 52, right: 168, top: 20, bottom: 38 },
     xAxis: {
       type: "category",
       boundaryGap: false,
       data: times,
       axisLine: { lineStyle: { color: "#dfe5ec" } },
       axisTick: { show: false },
-      axisLabel: { color: "#8a95a3", interval: Math.max(1, Math.floor(times.length / 4)) - 1 },
+      axisLabel: {
+        color: "#8a95a3",
+        fontSize: compact ? 10 : 12,
+        interval: Math.max(1, Math.floor(times.length / (compact ? 3 : 4))) - 1,
+      },
     },
     yAxis: {
       type: "value",
       scale: true,
-      axisLabel: { color: "#8a95a3", formatter: "{value}%" },
+      axisLabel: { color: "#8a95a3", fontSize: compact ? 10 : 12, formatter: "{value}%" },
       splitLine: { lineStyle: { color: "#edf0f4" } },
     },
     series: aligned,
   };
+}
+
+function SectorLegend({ sectors }) {
+  if (!sectors.length) return null;
+  return (
+    <ul className="sector-legend" aria-label="板块列表">
+      {sectors.map((sector, index) => (
+        <li key={sector.code || sector.name} className="sector-legend-item">
+          <span
+            className="sector-legend-swatch"
+            style={{ background: SERIES_COLORS[index % SERIES_COLORS.length] }}
+          />
+          <span className="sector-legend-name">{sector.name}</span>
+          <span className={`sector-legend-chg ${trendClass(sector.changePct)}`}>
+            {signed(sector.changePct, 2)}%
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function buildIndexOption(index) {
@@ -264,6 +294,7 @@ function LoadingView() {
 
 function App() {
   const [sectorFilter, setSectorFilter] = useState("全部");
+  const compact = useCompactLayout();
   const { data, loading, refreshing, error, refresh } = useDashboard();
 
   const sectors = useMemo(() => {
@@ -272,7 +303,10 @@ function App() {
     return data.sectors.filter((sector) => sector.type === sectorFilter);
   }, [data, sectorFilter]);
 
-  const sectorOption = useMemo(() => buildSectorOption(sectors), [sectors]);
+  const sectorOption = useMemo(
+    () => buildSectorOption(sectors, { compact }),
+    [sectors, compact],
+  );
   const breadthOption = useMemo(
     () => buildBreadthOption(data?.breadth.distribution || []),
     [data],
@@ -359,8 +393,13 @@ function App() {
               ))}
             </div>
           </div>
-          <Chart option={sectorOption} className="sector-chart" ariaLabel="热门行业和概念板块日内涨跌幅曲线" />
-          <div className="chart-note">曲线为相对昨收涨跌幅；把鼠标移到曲线或节点上，可查看该板块涨幅前 15 只代表票。</div>
+          <div className="sector-board">
+            <Chart option={sectorOption} className="sector-chart" ariaLabel="热门行业和概念板块日内涨跌幅曲线" />
+            <SectorLegend sectors={sectors} />
+          </div>
+          <div className="chart-note">
+            曲线为相对昨收涨跌幅；电脑悬停或手机点按曲线，可查看该板块涨幅前 15 只代表票。下方列表一页展示全部板块。
+          </div>
         </section>
 
         <aside className="side-stack">
@@ -415,7 +454,7 @@ function App() {
           <span className="panel-summary">当前展示 {limitPool.length} 只</span>
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="limit-table">
             <thead>
               <tr>
                 <th>股票</th>
@@ -429,12 +468,12 @@ function App() {
             <tbody>
               {limitPool.map((stock) => (
                 <tr key={`${stock.code}-${stock.name}`}>
-                  <td><strong>{stock.name}</strong><small>{stock.code}</small></td>
-                  <td className="trend-up">{signed(stock.changePct, 2)}%</td>
-                  <td><span className="board-badge">{stock.consecutive}板</span></td>
-                  <td>{stock.industry}</td>
-                  <td>{formatMoney(stock.amount)}</td>
-                  <td>{stock.firstLimitTime}</td>
+                  <td data-label="股票"><strong>{stock.name}</strong><small>{stock.code}</small></td>
+                  <td data-label="涨幅" className="trend-up">{signed(stock.changePct, 2)}%</td>
+                  <td data-label="连板"><span className="board-badge">{stock.consecutive}板</span></td>
+                  <td data-label="行业">{stock.industry}</td>
+                  <td data-label="成交额">{formatMoney(stock.amount)}</td>
+                  <td data-label="首次封板">{stock.firstLimitTime}</td>
                 </tr>
               ))}
             </tbody>
