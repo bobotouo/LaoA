@@ -1,0 +1,11 @@
+[project]
+name = "laoa"
+version = "0.1.0"
+description = "A-share market panorama dashboard"
+requires-python = ">=3.12"
+
+[tool.vercel]
+entrypoint = "api.index:app"
+
+[tool.vercel.scripts]
+build = "bash scripts/vercel-build.sh"

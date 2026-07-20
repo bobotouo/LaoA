@@ -1,0 +1,9 @@
+# Root requirements for Vercel Python runtime discovery.
+# Keep in sync with backend/requirements.txt.
+typing-extensions==4.16.0
+fastapi==0.136.0
+starlette==1.0.0
+pydantic==2.12.5
+uvicorn==0.44.0
+requests==2.32.5
+finshare==2.1.0

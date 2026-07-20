@@ -1,0 +1,40 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.py[cod]
+*.egg-info/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Node / frontend build
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Local caches / runtime
+.cache/
+backend/.cache/
+.runtime/
+*.log
+
+# Deploy artifacts
+public/
+.vercel/
