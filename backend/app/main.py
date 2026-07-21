@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -40,11 +40,22 @@ def health() -> dict[str, str]:
 
 @app.get("/api/market/dashboard")
 @app.get("/market/dashboard")
-def dashboard(refresh: bool = Query(default=False)) -> dict:
+def dashboard(response: Response, refresh: bool = Query(default=False)) -> dict:
     try:
-        return service.get_dashboard(refresh=refresh)
+        result = service.get_dashboard(refresh=refresh)
     except MarketDataError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    if os.getenv("VERCEL"):
+        if refresh:
+            response.headers["Cache-Control"] = "no-store"
+        else:
+            ttl = 8 if result.get("meta", {}).get("isTrading") else 120
+            response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
+            response.headers["Vercel-CDN-Cache-Control"] = (
+                f"s-maxage={ttl}, stale-while-revalidate=60"
+            )
+    return result
 
 
 # Local `make run` still serves the Vite build. On Vercel, static files come from /public.

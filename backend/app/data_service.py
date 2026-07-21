@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, time as day_time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 from zoneinfo import ZoneInfo
 
 import requests
@@ -63,10 +64,11 @@ class MarketDataService:
         self.finshare = FinshareProvider()
         self._active_market_source = "东方财富公开行情"
         self.session = requests.Session()
+        retry_total = 0 if os.getenv("VERCEL") else 2
         retry = Retry(
-            total=2,
-            connect=2,
-            read=1,
+            total=retry_total,
+            connect=retry_total,
+            read=min(1, retry_total),
             backoff_factor=0.25,
             status_forcelist=(429, 500, 502, 503, 504),
             allowed_methods=frozenset({"GET"}),
@@ -111,17 +113,56 @@ class MarketDataService:
         return result
 
     def _request_json(self, url: str, params: dict[str, Any]) -> dict[str, Any]:
-        response = self.session.get(url, params=params, timeout=self.timeout)
-        response.raise_for_status()
-        text = response.text.strip()
-        try:
-            return response.json()
-        except requests.JSONDecodeError:
-            start = text.find("{")
-            end = text.rfind("}")
-            if start >= 0 and end > start:
-                return json.loads(text[start : end + 1])
-            raise MarketDataError(f"unexpected response from {url}")
+        last_error: Exception | None = None
+        for candidate in self._request_candidates(url):
+            try:
+                response = self.session.get(candidate, params=params, timeout=self.timeout)
+                response.raise_for_status()
+                text = response.text.strip()
+                try:
+                    return response.json()
+                except requests.JSONDecodeError:
+                    start = text.find("{")
+                    end = text.rfind("}")
+                    if start >= 0 and end > start:
+                        return json.loads(text[start : end + 1])
+                    raise MarketDataError(f"行情接口返回格式异常（{candidate}）")
+            except (requests.RequestException, MarketDataError, json.JSONDecodeError) as exc:
+                last_error = exc
+
+        raise MarketDataError(f"行情接口暂不可用（{urlsplit(url).hostname or url}）：{last_error}") from last_error
+
+    @staticmethod
+    def _request_candidates(url: str) -> list[str]:
+        """Return the canonical East Money host followed by public fallbacks.
+
+        Vercel's shared outbound IPs are occasionally disconnected by one
+        East Money gateway. The API path is identical across these hosts.
+        """
+        parsed = urlsplit(url)
+        hostname = parsed.hostname or ""
+        service = next(
+            (label for label in ("push2his", "push2ex", "push2") if label in hostname),
+            None,
+        )
+        if not service:
+            return [url]
+
+        preferred = os.getenv("EASTMONEY_HOST", "").strip()
+        hosts = [
+            preferred,
+            f"{service}.eastmoney.com",
+            f"82.{service}.eastmoney.com",
+            f"60.{service}.eastmoney.com",
+        ]
+        candidates: list[str] = []
+        for host in hosts:
+            if not host:
+                continue
+            candidate = urlunsplit((parsed.scheme, host, parsed.path, parsed.query, parsed.fragment))
+            if candidate not in candidates:
+                candidates.append(candidate)
+        return candidates or [url]
 
     def _build_live_dashboard(self) -> dict[str, Any]:
         with ThreadPoolExecutor(max_workers=4) as executor:

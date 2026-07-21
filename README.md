@@ -72,5 +72,4 @@ make run
 2. Python 依赖交给 Vercel 自动安装（`.python-version` = 3.12）；`installCommand` 只跑前端 `npm install`，不要手动 `pip`/`uv pip --system`（会落到镜像自带的 3.9）
 3. 前端构建输出到 `public/`，API 入口为 `api/index.py`，函数超时 60s
 
-注意：海外节点上 FinShare/通达信可能连不上，会自动回退东财接口。
-
+注意：海外节点上 FinShare/通达信可能连不上，会自动回退东财接口。东财接口会优先使用主域名，并在云函数出口被单个节点断开时自动尝试备用节点。Vercel CDN 会按交易状态短暂缓存行情，避免每个浏览器轮询都重新访问上游；如所在网络对主域名有特殊限制，可设置 `EASTMONEY_HOST` 环境变量覆盖首选域名。
