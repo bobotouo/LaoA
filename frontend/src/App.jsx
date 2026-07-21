@@ -123,7 +123,7 @@ function buildSectorOption(sectors, { compact = false } = {}) {
       showSymbol: true,
       showAllSymbol: true,
       symbol: "circle",
-      symbolSize: compact ? 11 : 9,
+      symbolSize: compact ? 10 : 8,
       itemStyle: { opacity: 0 },
       connectNulls: true,
       triggerLineEvent: true,
@@ -293,13 +293,13 @@ function LoadingView() {
 }
 
 function App() {
-  const [sectorFilter, setSectorFilter] = useState("全部");
+  // Keep one sector family on the main plot so the intraday lines remain readable.
+  const [sectorFilter, setSectorFilter] = useState("行业");
   const compact = useCompactLayout();
   const { data, loading, refreshing, error, refresh } = useDashboard();
 
   const sectors = useMemo(() => {
     if (!data) return [];
-    if (sectorFilter === "全部") return data.sectors;
     return data.sectors.filter((sector) => sector.type === sectorFilter);
   }, [data, sectorFilter]);
 
@@ -380,7 +380,7 @@ function App() {
               <h2>涨跌板块分时对比</h2>
             </div>
             <div className="segmented small" aria-label="板块类型">
-              {["全部", "行业", "概念"].map((item) => (
+              {["行业", "概念"].map((item) => (
                 <button
                   type="button"
                   key={item}
@@ -398,7 +398,7 @@ function App() {
             <SectorLegend sectors={sectors} />
           </div>
           <div className="chart-note">
-            曲线为相对昨收涨跌幅；电脑悬停或手机点按曲线，可查看该板块涨幅前 15 只代表票。下方列表一页展示全部板块。
+            曲线为相对昨收涨跌幅；电脑悬停或手机点按曲线，可查看该板块涨幅前 15 只代表票。下方分两列展示当前类别板块。
           </div>
         </section>
 

@@ -431,23 +431,54 @@ class MarketDataService:
             except Exception:
                 pass
 
-        payload = self._request_json(
-            "https://82.push2.eastmoney.com/api/qt/clist/get",
-            {
-                "pn": 1,
-                "pz": 6000,
-                "po": 1,
-                "np": 1,
-                "fltt": 2,
-                "invt": 2,
-                "fid": "f3",
-                "fs": "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048",
-                "fields": "f2,f3,f6,f12,f14",
-            },
-        )
-        rows = (payload.get("data") or {}).get("diff") or []
+        endpoint = "https://82.push2.eastmoney.com/api/qt/clist/get"
+        base_params = {
+            "po": 1,
+            "np": 1,
+            "fltt": 2,
+            "invt": 2,
+            "fid": "f3",
+            "fs": "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048",
+            "fields": "f2,f3,f6,f12,f14",
+        }
+        payload = self._request_json(endpoint, {**base_params, "pn": 1, "pz": 6000})
+        data = payload.get("data") or {}
+        rows = data.get("diff") or []
+
+        # clist/get is capped at 100 rows by some East Money gateways even when
+        # a larger pz is requested. Fetch the remaining pages explicitly so the
+        # histogram is based on the whole market instead of the top 100 gainers.
+        total = int(self._number(data.get("total")))
+        page_size = len(rows)
+        if rows and total > page_size and page_size > 0:
+            page_count = min((total + page_size - 1) // page_size, 80)
+
+            def fetch_page(page: int) -> list[dict[str, Any]]:
+                page_payload = self._request_json(
+                    endpoint,
+                    {**base_params, "pn": page, "pz": page_size},
+                )
+                return ((page_payload.get("data") or {}).get("diff") or [])
+
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                for page_rows in executor.map(fetch_page, range(2, page_count + 1)):
+                    rows.extend(page_rows)
+
+            deduped: dict[str, dict[str, Any]] = {}
+            for row in rows:
+                code = str(row.get("f12") or "")
+                if code:
+                    deduped[code] = row
+            rows = list(deduped.values())
+
+            # A partial result would make breadth look precise while silently
+            # sampling only part of the market; fail so the caller can use its
+            # last known complete snapshot instead.
+            if total >= 1000 and len(rows) < int(total * 0.9):
+                raise MarketDataError(f"东方财富全市场分页不完整（{len(rows)}/{total}）")
+
         self._active_market_source = "东方财富公开行情"
-        self._set_component_cache("market-snapshots", rows, ttl=12)
+        self._set_component_cache("market-snapshots", rows, ttl=24)
         return rows
 
     def _fetch_overview_counts(self) -> dict[str, int]:

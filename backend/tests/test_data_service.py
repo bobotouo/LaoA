@@ -62,6 +62,41 @@ class MarketDataServiceTests(unittest.TestCase):
             with self.assertRaises(MarketDataError):
                 service.get_dashboard(refresh=True)
 
+    def test_breadth_distribution_covers_each_change_bucket(self) -> None:
+        service = MarketDataService()
+        values = [-10, -9, -7, -4, -2, -0.5, 0, 0.5, 2, 4, 6, 8.5, 10]
+        spots = [{"f3": value, "f6": 0} for value in values]
+
+        breadth, _ = service._summarize_spots(spots, {})
+
+        self.assertEqual(sum(item["count"] for item in breadth["distribution"]), len(values))
+        self.assertEqual([item["count"] for item in breadth["distribution"]], [1] * len(values))
+
+    def test_eastmoney_spot_fallback_fetches_every_capped_page(self) -> None:
+        service = MarketDataService()
+        service.finshare.available = False
+        calls: list[tuple[int, int]] = []
+
+        def request_page(_url: str, params: dict) -> dict:
+            page = int(params["pn"])
+            page_size = 100 if page == 1 else int(params["pz"])
+            calls.append((page, int(params["pz"])))
+            start = (page - 1) * page_size
+            end = min(start + page_size, 250)
+            rows = [
+                {"f12": f"{index:06d}", "f3": index / 100, "f6": index}
+                for index in range(start, end)
+            ]
+            return {"data": {"total": 250, "diff": rows}}
+
+        service._request_json = request_page
+
+        rows = service._fetch_spot_market()
+
+        self.assertEqual(len(rows), 250)
+        self.assertEqual({page for page, _ in calls}, {1, 2, 3})
+        self.assertEqual(dict(calls)[2], 100)
+
 
 if __name__ == "__main__":
     unittest.main()
