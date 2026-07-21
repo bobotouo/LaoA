@@ -64,12 +64,13 @@ class MarketDataService:
         self.finshare = FinshareProvider()
         self._active_market_source = "东方财富公开行情"
         self.session = requests.Session()
-        retry_total = 0 if os.getenv("VERCEL") else 2
+        # A couple of retries help when one East Money edge closes the socket.
+        retry_total = 2
         retry = Retry(
             total=retry_total,
             connect=retry_total,
-            read=min(1, retry_total),
-            backoff_factor=0.25,
+            read=1,
+            backoff_factor=0.3,
             status_forcelist=(429, 500, 502, 503, 504),
             allowed_methods=frozenset({"GET"}),
         )
@@ -134,27 +135,35 @@ class MarketDataService:
 
     @staticmethod
     def _request_candidates(url: str) -> list[str]:
-        """Return the canonical East Money host followed by public fallbacks.
+        """Prefer East Money hosts that currently accept shared/cloud egress.
 
-        Vercel's shared outbound IPs are occasionally disconnected by one
-        East Money gateway. The API path is identical across these hosts.
+        Many `*.push2.eastmoney.com` edges reset connections from Vercel and
+        some residential networks. `push2delay.eastmoney.com` serves the same
+        clist/ulist/trends/kline paths and is currently more reachable.
         """
         parsed = urlsplit(url)
         hostname = parsed.hostname or ""
-        service = next(
-            (label for label in ("push2his", "push2ex", "push2") if label in hostname),
-            None,
-        )
-        if not service:
+        preferred = os.getenv("EASTMONEY_HOST", "").strip()
+
+        if "push2ex" in hostname:
+            hosts = [
+                preferred,
+                "push2ex.eastmoney.com",
+                "82.push2ex.eastmoney.com",
+            ]
+        elif "push2his" in hostname or "push2" in hostname:
+            hosts = [
+                preferred,
+                "push2delay.eastmoney.com",
+                "push2.eastmoney.com",
+                "82.push2.eastmoney.com",
+                "60.push2.eastmoney.com",
+                "push2his.eastmoney.com",
+                "82.push2his.eastmoney.com",
+            ]
+        else:
             return [url]
 
-        preferred = os.getenv("EASTMONEY_HOST", "").strip()
-        hosts = [
-            preferred,
-            f"{service}.eastmoney.com",
-            f"82.{service}.eastmoney.com",
-            f"60.{service}.eastmoney.com",
-        ]
         candidates: list[str] = []
         for host in hosts:
             if not host:
@@ -173,18 +182,38 @@ class MarketDataService:
 
             indices = index_future.result()
             sectors = sector_future.result()
-            spots = spot_future.result()
-            overview_counts = overview_future.result()
+            try:
+                spots = spot_future.result()
+            except Exception:
+                spots = self._get_component_cache("market-snapshots", allow_stale=True) or []
+            try:
+                overview_counts = overview_future.result()
+            except Exception:
+                overview_counts = self._get_component_cache("overview", allow_stale=True) or {}
 
         if len(indices) < 3 or not sectors:
             raise MarketDataError("核心实时行情数据不完整")
 
         breadth, turnover = self._summarize_spots(spots, overview_counts)
-        turnover.update(self._fetch_turnover_averages(turnover["current"]))
-        limit_pool = self._fetch_limit_pool(spots)
+        try:
+            turnover.update(self._fetch_turnover_averages(turnover["current"]))
+        except Exception:
+            pass
+        try:
+            limit_pool = self._fetch_limit_pool(spots)
+        except Exception:
+            limit_pool = self._get_component_cache("limit-pool", allow_stale=True) or []
         now = datetime.now(SHANGHAI_TZ)
 
         is_trading = self._is_trading_time(now)
+        message = (
+            "交易中，数据实时刷新"
+            if is_trading
+            else "非交易时段，展示最近一个交易日的最新行情"
+        )
+        if not spots:
+            message = "全市场快照暂不可用，已展示指数与板块行情"
+
         return {
             "meta": {
                 "mode": "live",
@@ -193,11 +222,7 @@ class MarketDataService:
                 "sectorSource": SECTOR_SOURCE,
                 "updatedAt": now.isoformat(timespec="seconds"),
                 "isTrading": is_trading,
-                "message": (
-                    "交易中，数据实时刷新"
-                    if is_trading
-                    else "非交易时段，展示最近一个交易日的最新行情"
-                ),
+                "message": message,
                 "stockCount": len(spots),
                 "sectorCount": len(sectors),
                 "pollIntervalMs": 8000 if is_trading else 120000,
@@ -226,7 +251,7 @@ class MarketDataService:
         secids = ",".join(item[0] for item in self.INDEX_SECIDS.values())
         try:
             payload = self._request_json(
-                "https://push2.eastmoney.com/api/qt/ulist.np/get",
+                "https://push2delay.eastmoney.com/api/qt/ulist.np/get",
                 {
                     "fltt": 2,
                     "invt": 2,
@@ -278,7 +303,7 @@ class MarketDataService:
 
     def _fetch_trend(self, secid: str) -> list[dict[str, Any]]:
         payload = self._request_json(
-            "https://push2his.eastmoney.com/api/qt/stock/trends2/get",
+            "https://push2delay.eastmoney.com/api/qt/stock/trends2/get",
             {
                 "secid": secid,
                 "fields1": "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13",
@@ -382,7 +407,7 @@ class MarketDataService:
         if not code.startswith("BK"):
             return []
         payload = self._request_json(
-            "https://82.push2.eastmoney.com/api/qt/clist/get",
+            "https://push2delay.eastmoney.com/api/qt/clist/get",
             {
                 "pn": 1,
                 "pz": max(limit, 1),
@@ -429,7 +454,7 @@ class MarketDataService:
         self, sector_type: str, fs: str, descending: bool, limit: int
     ) -> list[dict[str, Any]]:
         payload = self._request_json(
-            "https://82.push2.eastmoney.com/api/qt/clist/get",
+            "https://push2delay.eastmoney.com/api/qt/clist/get",
             {
                 "pn": 1,
                 "pz": max(limit, 1),
@@ -472,7 +497,7 @@ class MarketDataService:
             except Exception:
                 pass
 
-        endpoint = "https://82.push2.eastmoney.com/api/qt/clist/get"
+        endpoint = "https://push2delay.eastmoney.com/api/qt/clist/get"
         base_params = {
             "po": 1,
             "np": 1,
@@ -512,11 +537,13 @@ class MarketDataService:
                     deduped[code] = row
             rows = list(deduped.values())
 
-            # A partial result would make breadth look precise while silently
-            # sampling only part of the market; fail so the caller can use its
-            # last known complete snapshot instead.
+            # Prefer a complete snapshot, but on serverless accept a large partial
+            # result instead of failing the whole dashboard.
             if total >= 1000 and len(rows) < int(total * 0.9):
-                raise MarketDataError(f"东方财富全市场分页不完整（{len(rows)}/{total}）")
+                if os.getenv("VERCEL") and len(rows) >= 1000:
+                    pass
+                else:
+                    raise MarketDataError(f"东方财富全市场分页不完整（{len(rows)}/{total}）")
 
         self._active_market_source = "东方财富公开行情"
         self._set_component_cache("market-snapshots", rows, ttl=24)
@@ -528,7 +555,7 @@ class MarketDataService:
             return cached
         try:
             payload = self._request_json(
-                "https://82.push2.eastmoney.com/api/qt/ulist.np/get",
+                "https://push2delay.eastmoney.com/api/qt/ulist.np/get",
                 {
                     "fltt": 2,
                     "fields": "f104,f105,f106,f107",
@@ -580,10 +607,12 @@ class MarketDataService:
         # Overview limit counts are preferred (handles 20%/5% boards better than ±9.5%).
         if len(changes) >= 4000:
             breadth_up, breadth_flat, breadth_down = up, flat, down
-        else:
+        elif overview_counts:
             breadth_up = overview_counts.get("up") or up
             breadth_down = overview_counts.get("down") or down
-            breadth_flat = flat if not overview_counts else max(0, len(changes) - breadth_up - breadth_down)
+            breadth_flat = max(0, len(changes) - breadth_up - breadth_down) if changes else 0
+        else:
+            breadth_up, breadth_flat, breadth_down = up, flat, down
 
         breadth = {
             "up": breadth_up,
@@ -638,7 +667,7 @@ class MarketDataService:
 
     def _fetch_daily_amounts(self, secid: str) -> dict[str, float]:
         payload = self._request_json(
-            "https://push2his.eastmoney.com/api/qt/stock/kline/get",
+            "https://push2delay.eastmoney.com/api/qt/stock/kline/get",
             {
                 "secid": secid,
                 "klt": 101,

@@ -97,12 +97,13 @@ class MarketDataServiceTests(unittest.TestCase):
         self.assertEqual({page for page, _ in calls}, {1, 2, 3})
         self.assertEqual(dict(calls)[2], 100)
 
-    def test_eastmoney_request_prefers_canonical_host_with_fallbacks(self) -> None:
+    def test_eastmoney_request_prefers_delay_host_with_fallbacks(self) -> None:
         candidates = MarketDataService._request_candidates(
             "https://82.push2.eastmoney.com/api/qt/clist/get"
         )
 
-        self.assertEqual(candidates[0], "https://push2.eastmoney.com/api/qt/clist/get")
+        self.assertEqual(candidates[0], "https://push2delay.eastmoney.com/api/qt/clist/get")
+        self.assertIn("https://push2.eastmoney.com/api/qt/clist/get", candidates)
         self.assertIn("https://82.push2.eastmoney.com/api/qt/clist/get", candidates)
         self.assertIn("https://60.push2.eastmoney.com/api/qt/clist/get", candidates)
 
