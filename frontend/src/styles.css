@@ -87,7 +87,9 @@ h1 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 38px); letter-spacing: -0.045e
   margin: 0;
   padding: 4px 2px 4px 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--legend-cols, 2), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--legend-rows, 1), auto);
+  grid-auto-flow: column;
   gap: 6px 18px;
   align-content: start;
   overflow: visible;
@@ -208,10 +210,6 @@ footer { color: #929ca7; font-size: 11px; text-align: center; padding: 19px 12px
   .dominant-panel { min-height: 0; }
   .sector-board { gap: 10px; }
   .sector-chart { height: 480px; min-height: 420px; }
-  .sector-legend {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px 8px;
-  }
 }
 
 @media (max-width: 760px) {
@@ -245,7 +243,7 @@ footer { color: #929ca7; font-size: 11px; text-align: center; padding: 19px 12px
   .segmented.small button { flex: 1; min-height: 36px; }
   .sector-chart { height: 360px; min-height: 340px; }
   .sector-legend {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 8px;
   }
   .sector-legend-item {
     padding: 7px 8px;
@@ -306,7 +304,6 @@ footer { color: #929ca7; font-size: 11px; text-align: center; padding: 19px 12px
   .index-chart { min-height: 72px; }
   .average-grid { grid-template-columns: 1fr; }
   .average-grid div { display: flex; justify-content: space-between; align-items: baseline; }
-  .sector-legend { grid-template-columns: 1fr; }
   .sector-chart { height: 300px; min-height: 280px; }
   .sector-tip-row {
     grid-template-columns: 16px minmax(0, 1fr) 52px;

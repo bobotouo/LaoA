@@ -186,10 +186,38 @@ function buildSectorOption(sectors, { compact = false } = {}) {
   };
 }
 
+function useLegendColumns() {
+  const [columns, setColumns] = useState(() => {
+    if (typeof window === "undefined") return 2;
+    if (window.matchMedia("(max-width: 480px)").matches) return 1;
+    return 2;
+  });
+
+  useEffect(() => {
+    const mobile = window.matchMedia("(max-width: 480px)");
+    const sync = () => setColumns(mobile.matches ? 1 : 2);
+    sync();
+    mobile.addEventListener("change", sync);
+    return () => mobile.removeEventListener("change", sync);
+  }, []);
+
+  return columns;
+}
+
 function SectorLegend({ sectors }) {
+  const columns = useLegendColumns();
+  const rows = Math.max(1, Math.ceil(sectors.length / columns));
+
   if (!sectors.length) return null;
   return (
-    <ul className="sector-legend" aria-label="板块列表">
+    <ul
+      className="sector-legend"
+      aria-label="板块列表"
+      style={{
+        "--legend-cols": columns,
+        "--legend-rows": rows,
+      }}
+    >
       {sectors.map((sector, index) => (
         <li key={sector.code || sector.name} className="sector-legend-item">
           <span
