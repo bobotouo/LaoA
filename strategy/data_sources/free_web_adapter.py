@@ -23,6 +23,13 @@ SINA_LIST_URL = (
     "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
     "Market_Center.getHQNodeData"
 )
+SINA_LIST_HOST = "vip.stock.finance.sina.com.cn"
+# GitHub Actions 海外 runner 无法直接 DNS 解析新浪域名，用公开 IP 直连
+SINA_LIST_FALLBACK_IPS = (
+    "49.7.36.205",
+    "116.133.8.236",
+    "106.63.15.52",
+)
 EASTMONEY_HOST = "push2his.eastmoney.com"
 EASTMONEY_KLINE_PATH = "/api/qt/stock/kline/get"
 EASTMONEY_FALLBACK_IPS = (
@@ -56,6 +63,12 @@ class FreeWebAdapter:
         limit: int = 0,
         refresh: bool = False,
     ) -> pd.DataFrame:
+        # 通过已部署 API 中转获取股票列表（GitHub Actions 海外 runner 无法直连新浪）。
+        # 该 URL 指向 Vercel 上 China-side 的东财快照接口 /api/market/stock-list。
+        proxy_url = os.getenv("STOCK_LIST_URL", "").strip()
+        if proxy_url:
+            return self._fetch_stock_list_proxy(proxy_url, market=market, limit=limit)
+
         files = sorted(SINA_PAGE_CACHE_DIR.glob("page_*.json"))
         current_cache = files and all(
             date.fromtimestamp(path.stat().st_mtime) == date.today() for path in files
@@ -104,6 +117,58 @@ class FreeWebAdapter:
                     "close": self._number(row.get("trade")),
                     "prev_close": self._number(row.get("settlement")),
                     "data_source": "sina",
+                    "data_date": pd.Timestamp.now().normalize(),
+                }
+            )
+        df = pd.DataFrame(normalized)
+        if market == "sh":
+            df = df[df["full_code"].str.endswith(".SH")]
+        elif market == "sz":
+            df = df[df["full_code"].str.endswith(".SZ")]
+        if limit > 0:
+            df = df.head(limit)
+        return df.reset_index(drop=True)
+
+    def _fetch_stock_list_proxy(
+        self, proxy_url: str, market: str = "all", limit: int = 0
+    ) -> pd.DataFrame:
+        """Fetch the stock list from a China-side relay API (STOCK_LIST_URL).
+
+        The deployed Vercel API (/api/market/stock-list) returns the EastMoney
+        clist snapshot already normalized to {code, full_code, name, market,
+        price, change_pct, amount}, so GitHub Actions never has to reach Sina.
+        """
+        result = subprocess.run(
+            ["curl", "--max-time", "60", "--silent", "--show-error",
+             "-H", "Accept: application/json", proxy_url],
+            capture_output=True, text=True, check=False,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(f"stock list proxy failed: {result.stderr.strip()}")
+        try:
+            rows = json.loads(result.stdout)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"stock list proxy bad JSON: {result.stdout[:200]}") from exc
+        if not isinstance(rows, list):
+            raise RuntimeError(f"stock list proxy unexpected payload: {str(rows)[:200]}")
+        normalized: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for row in rows:
+            code = str(row.get("code") or "").zfill(6)
+            full_code = str(row.get("full_code") or "")
+            if not code or not full_code or full_code in seen:
+                continue
+            seen.add(full_code)
+            normalized.append(
+                {
+                    "code": code,
+                    "full_code": full_code,
+                    "name": str(row.get("name") or ""),
+                    "market": int(row.get("market") or (1 if full_code.endswith(".SH") else 0)),
+                    "price": self._number(row.get("price")),
+                    "change_pct": self._number(row.get("change_pct")),
+                    "amount": self._number(row.get("amount")),
+                    "data_source": "eastmoney_proxy",
                     "data_date": pd.Timestamp.now().normalize(),
                 }
             )
@@ -424,26 +489,45 @@ class FreeWebAdapter:
                 "node": "hs_a",
                 "symbol": "",
             }
+            url = f"{SINA_LIST_URL}?{urlencode(params)}"
+            last_error = "no endpoint attempted"
+            # 先尝试 DNS 直连（本地开发环境）
             result = subprocess.run(
-                [
-                    "curl",
-                    "--max-time",
-                    "20",
-                    "--silent",
-                    "--show-error",
-                    "-A",
-                    "Mozilla/5.0",
-                    f"{SINA_LIST_URL}?{urlencode(params)}",
-                ],
-                capture_output=True,
-                text=True,
-                check=False,
+                ["curl", "--max-time", "20", "--silent", "--show-error", "-A", "Mozilla/5.0", url],
+                capture_output=True, text=True, check=False,
             )
-            if result.returncode != 0:
-                raise RuntimeError(result.stderr.strip())
-            payload = json.loads(result.stdout)
-            path = SINA_PAGE_CACHE_DIR / f"page_{page:02d}.json"
-            path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            if result.returncode == 0:
+                try:
+                    payload = json.loads(result.stdout)
+                    path = SINA_PAGE_CACHE_DIR / f"page_{page:02d}.json"
+                    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+                    return
+                except (json.JSONDecodeError, OSError) as exc:
+                    last_error = str(exc)
+            else:
+                last_error = result.stderr.strip() or f"curl exit {result.returncode}"
+            # DNS 直连失败时尝试 IP 直连（适用于 GitHub Actions 海外 runner）
+            for ip in SINA_LIST_FALLBACK_IPS:
+                result = subprocess.run(
+                    [
+                        "curl", "--resolve", f"{SINA_LIST_HOST}:443:{ip}",
+                        "--max-time", "20", "--silent", "--show-error",
+                        "-A", "Mozilla/5.0", url,
+                    ],
+                    capture_output=True, text=True, check=False,
+                )
+                if result.returncode != 0:
+                    last_error = result.stderr.strip()
+                    continue
+                try:
+                    payload = json.loads(result.stdout)
+                    path = SINA_PAGE_CACHE_DIR / f"page_{page:02d}.json"
+                    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+                    return
+                except (json.JSONDecodeError, OSError) as exc:
+                    last_error = str(exc)
+                    continue
+            raise RuntimeError(f"page {page}: {last_error}")
 
         with ThreadPoolExecutor(max_workers=min(self.workers, 8)) as executor:
             futures = [executor.submit(download, page) for page in range(1, 71)]

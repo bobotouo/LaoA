@@ -54,6 +54,9 @@ jobs:
           A_SHARE_WEB_WORKERS: "16"
           # 强制北京时间，避免 UTC 跨天导致 --end 日期错误
           TZ: "Asia/Shanghai"
+          # 海外 runner 无法直连新浪(连接超时)。股票列表改经已部署的 Vercel API 中转：
+          # Vercel 能访问东财全市场快照，且 GitHub Actions 能访问该域名。
+          STOCK_LIST_URL: "https://lao-a.bobotou118.dpdns.org/api/market/stock-list"
 
       - name: Upload results
         uses: actions/upload-artifact@v4

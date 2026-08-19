@@ -529,6 +529,43 @@ class MarketDataService:
         ]
         return rows[:limit]
 
+    @staticmethod
+    def _exchange_suffix(code: str) -> str:
+        """Infer a stock's exchange suffix (SH/SZ/BJ) from its 6-digit code."""
+        if code.startswith(("43", "83", "87", "88", "92")):
+            return "BJ"  # 北交所
+        if code.startswith("6"):
+            return "SH"  # 沪市（含科创板 688）
+        return "SZ"  # 深市（含创业板 300）
+
+    def fetch_stock_list_snapshot(self) -> list[dict[str, Any]]:
+        """Normalized full-market stock list for the A+ strategy.
+
+        Serves as a China-side relay so GitHub Actions (overseas) never has to
+        reach Sina directly: the strategy fetches this via the deployed API.
+        """
+        rows = self._fetch_spot_market()
+        result: list[dict[str, Any]] = []
+        for row in rows:
+            code = str(row.get("f12") or "")
+            name = str(row.get("f14") or "")
+            if not code or not name:
+                continue
+            suffix = self._exchange_suffix(code)
+            result.append(
+                {
+                    "code": code,
+                    "full_code": f"{code}.{suffix}",
+                    "name": name,
+                    "market": 1 if suffix == "SH" else 0,
+                    "price": self._number(row.get("f2")),
+                    "change_pct": self._number(row.get("f3")),
+                    "amount": self._number(row.get("f6")),
+                }
+            )
+        result.sort(key=lambda item: item["full_code"])
+        return result
+
     def _fetch_spot_market(self) -> list[dict[str, Any]]:
         cached = self._get_component_cache("market-snapshots")
         if cached is not None:

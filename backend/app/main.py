@@ -73,6 +73,17 @@ class APlusPick(BaseModel):
     data_date: str = ""
 
 
+@app.get("/api/market/stock-list")
+def stock_list() -> list[dict]:
+    """Full-market stock list (code/name/price) for the A+ strategy.
+
+    Acts as a China-side relay so GitHub Actions (overseas) never has to
+    reach Sina directly.  Reuses the East Money clist snapshot that the
+    dashboard already fetches.
+    """
+    return service.fetch_stock_list_snapshot()
+
+
 @app.post("/api/strategy/a-plus")
 @app.post("/strategy/a-plus")
 def upload_a_plus_picks(picks: list[APlusPick]) -> dict:
