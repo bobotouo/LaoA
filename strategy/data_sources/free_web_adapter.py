@@ -31,7 +31,10 @@ EASTMONEY_FALLBACK_IPS = (
     "117.184.40.129",
 )
 TENCENT_HOST = "web.ifzq.gtimg.cn"
-TENCENT_KLINE_PATH = "/appstock/app/fqkline/get"
+# newfqkline returns [date, open, close, high, low, volume, adj, chg_pct,
+# amount(万元), ...]; the legacy fqkline endpoint only returns 6 fields (no
+# amount), so it cannot feed the A+ liquidity filter.
+TENCENT_KLINE_PATH = "/appstock/app/newfqkline/get"
 TENCENT_FALLBACK_IPS = ("43.154.254.89", "43.154.254.185")
 SINA_KLINE_URL = (
     "https://quotes.sina.cn/cn/api/jsonp_v2.php/",
@@ -219,8 +222,25 @@ class FreeWebAdapter:
             fields = line if isinstance(line, list) else str(line).split(",")
             if len(fields) < 6:
                 continue
-            rows.append(
-                {
+            if source == "tencent":
+                # newfqkline: [date, open, close, high, low, volume, adj, chg_pct, amount(万元), extra]
+                row_data = {
+                    "code": code,
+                    "date": fields[0],
+                    "open": self._number(fields[1]),
+                    "close": self._number(fields[2]),
+                    "high": self._number(fields[3]),
+                    "low": self._number(fields[4]),
+                    "volume": self._number(fields[5]),
+                    "amount": (self._number(fields[8]) or 0) * 10000.0 if len(fields) > 8 else None,
+                    "amplitude": None,
+                    "change_pct": self._number(fields[7]) if len(fields) > 7 else None,
+                    "change": None,
+                    "turnover_rate": None,
+                }
+            elif source == "eastmoney":
+                # EastMoney: [date, open, close, high, low, volume, amount, amplitude, chg_pct, change, turnover_rate]
+                row_data = {
                     "code": code,
                     "date": fields[0],
                     "open": self._number(fields[1]),
@@ -233,10 +253,26 @@ class FreeWebAdapter:
                     "change_pct": self._number(fields[8]) if len(fields) > 8 else None,
                     "change": self._number(fields[9]) if len(fields) > 9 else None,
                     "turnover_rate": self._number(fields[10]) if len(fields) > 10 else None,
-                    "data_source": source,
-                    "adjustment": adjust,
                 }
-            )
+            else:  # sina
+                # Sina: [date, open, close, high, low, volume]
+                row_data = {
+                    "code": code,
+                    "date": fields[0],
+                    "open": self._number(fields[1]),
+                    "close": self._number(fields[2]),
+                    "high": self._number(fields[3]),
+                    "low": self._number(fields[4]),
+                    "volume": self._number(fields[5]),
+                    "amount": None,
+                    "amplitude": None,
+                    "change_pct": None,
+                    "change": None,
+                    "turnover_rate": None,
+                }
+            row_data["data_source"] = source
+            row_data["adjustment"] = adjust
+            rows.append(row_data)
         frame = pd.DataFrame(rows)
         if not frame.empty:
             frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
@@ -248,7 +284,8 @@ class FreeWebAdapter:
         symbol, _, suffix = code.upper().partition(".")
         raw_symbol = ("sh" if suffix == "SH" or symbol.startswith("6") else "sz") + symbol
         adjustment = {"none": "", "qfq": "qfq", "hfq": "hfq"}.get(adjust, "qfq")
-        param = f"{raw_symbol},day,{start},{end},200,{adjustment}"
+        # newfqkline 不支持 start/end 参数，但支持 pagesize；取 200 根 K 线后按日期过滤
+        param = f"{raw_symbol},day,,,200,{adjustment}"
         url = f"https://{TENCENT_HOST}{TENCENT_KLINE_PATH}?{urlencode({'param': param})}"
         configured = os.getenv("TENCENT_RESOLVE_IPS", "")
         ips = [item.strip() for item in configured.split(",") if item.strip()]
@@ -279,10 +316,19 @@ class FreeWebAdapter:
             except json.JSONDecodeError:
                 last_error = result.stdout[:100]
                 continue
-            klines = ((payload.get("data") or {}).get(raw_symbol) or {}).get(key) or []
+            data = payload.get("data") or {}
+            if isinstance(data, dict):
+                klines = (data.get(raw_symbol) or {}).get(key) or []
+            else:
+                klines = []
             if klines:
-                return {"_provider": "tencent", "klines": klines}
-            last_error = str(payload)[:100]
+                # 按请求日期范围过滤
+                filtered = [row for row in klines if len(row) >= 1 and start <= row[0] <= end]
+                if filtered:
+                    return {"_provider": "tencent", "klines": filtered}
+                last_error = f"no bars in [{start}, {end}] (total={len(klines)})"
+            else:
+                last_error = str(payload)[:100]
         # 兜底: 所有 IP 直连失败时尝试直接 DNS 解析（适用于海外 runner）
         try:
             direct = subprocess.run(
@@ -291,10 +337,18 @@ class FreeWebAdapter:
             )
             if direct.returncode == 0:
                 payload = json.loads(direct.stdout)
-                klines = ((payload.get("data") or {}).get(raw_symbol) or {}).get(key) or []
+                data = payload.get("data") or {}
+                if isinstance(data, dict):
+                    klines = (data.get(raw_symbol) or {}).get(key) or []
+                else:
+                    klines = []
                 if klines:
-                    return {"_provider": "tencent", "klines": klines}
-                last_error = str(payload)[:100]
+                    filtered = [row for row in klines if len(row) >= 1 and start <= row[0] <= end]
+                    if filtered:
+                        return {"_provider": "tencent", "klines": filtered}
+                    last_error = f"no bars in [{start}, {end}] (total={len(klines)})"
+                else:
+                    last_error = str(payload)[:100]
             else:
                 last_error = direct.stderr.strip() or last_error
         except Exception as exc:

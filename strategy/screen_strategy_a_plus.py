@@ -273,9 +273,13 @@ def screen_history(
     result = pd.DataFrame(rows)
     if result.empty:
         return result
-    # 流动性过滤: 近5日均成交额 >= min_amount_5d 亿, 换手率 >= min_turnover %
+    # 流动性过滤: 近5日均成交额 >= min_amount_5d 亿
     result["avg_amount_5d_yi"] = result["avg_amount_5d"] / 1e8
-    mask_liq = (result["avg_amount_5d_yi"] >= min_amount_5d) & (result["turnover_rate"] >= min_turnover)
+    mask_liq = result["avg_amount_5d_yi"] >= min_amount_5d
+    # 换手率过滤: 仅当数据源提供了换手率时才应用（turnover_rate > 0 表示有真实值）；
+    # free-web 源（腾讯 newfqkline）没有换手率字段，跳过此条件。
+    if (result["turnover_rate"] > 0).any():
+        mask_liq = mask_liq & (result["turnover_rate"] >= min_turnover)
     result = result[mask_liq].copy()
     if result.empty:
         return result
@@ -367,9 +371,9 @@ def main() -> int:
     )
     parser.add_argument(
         "--source",
-        choices=("router", "free-web"),
+        choices=("router", "free-web", "finshare"),
         default="router",
-        help="router uses configured fallbacks; free-web uses Sina/Tencent/EastMoney directly",
+        help="router uses configured fallbacks; free-web uses Sina/Tencent/EastMoney directly; finshare uses finshare CLI (has amount/turnover)",
     )
     parser.add_argument("--min-amount-5d", type=float, default=2.0, help="近5日均成交额下限(亿元)")
     parser.add_argument("--min-turnover", type=float, default=3.0, help="换手率下限(百分比)")
@@ -380,7 +384,35 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    adapter = FreeWebAdapter() if args.source == "free-web" else AShareDataAdapter()
+    if args.source == "free-web":
+        adapter = FreeWebAdapter()
+    elif args.source == "finshare":
+        # 股票列表用 Sina，历史数据用 Finshare（含 amount/turnover）
+        import concurrent.futures
+        from data_sources.finshare_adapter import FinshareAdapter
+        _list_adapter = FreeWebAdapter()
+        _hist_adapter = FinshareAdapter()
+        class _FinshareCombo:
+            def fetch_stock_list(self, **kw):
+                return _list_adapter.fetch_stock_list(**kw)
+            def fetch_market_history(self, start, end, adjust, codes):
+                frames = []
+                with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+                    jobs = {ex.submit(_hist_adapter.fetch_kline, c, start=start, end=end, period='daily', adjust=adjust): c for c in codes}
+                    for i, f in enumerate(concurrent.futures.as_completed(jobs), 1):
+                        try:
+                            df = f.result()
+                            if not df.empty:
+                                frames.append(df)
+                        except:
+                            pass
+                        if i % 500 == 0:
+                            print(f'finshare_history={i}/{len(jobs)}', file=sys.stderr, flush=True)
+                import pandas as pd
+                return pd.concat(frames, ignore_index=True).sort_values(['code','date']).reset_index(drop=True) if frames else pd.DataFrame()
+        adapter = _FinshareCombo()
+    else:
+        adapter = AShareDataAdapter()
     try:
         universe = adapter.fetch_stock_list(limit=args.limit, refresh=True)
         universe = filter_universe(

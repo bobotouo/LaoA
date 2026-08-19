@@ -599,6 +599,13 @@ class MarketDataService:
         return rows
 
     def _fetch_overview_counts(self) -> dict[str, int]:
+        """Exchange-level up/down counts (f104/f105) used only when the spot
+        snapshot is too small to be representative.
+
+        NOTE: East Money's f106/f107 on this endpoint are NOT reliable
+        limit-up/limit-down counts (they disagree badly with the actual limit
+        pools), so limit counts are computed from the spot snapshot instead.
+        """
         cached = self._get_component_cache("overview")
         if cached is not None:
             return cached
@@ -607,7 +614,7 @@ class MarketDataService:
                 "https://push2delay.eastmoney.com/api/qt/ulist.np/get",
                 {
                     "fltt": 2,
-                    "fields": "f104,f105,f106,f107",
+                    "fields": "f104,f105",
                     "secids": "1.000001,0.399001",
                 },
             )
@@ -617,48 +624,100 @@ class MarketDataService:
         result = {
             "up": sum(int(self._number(row.get("f104"))) for row in rows),
             "down": sum(int(self._number(row.get("f105"))) for row in rows),
-            "limitUp": sum(int(self._number(row.get("f106"))) for row in rows),
-            "limitDown": sum(int(self._number(row.get("f107"))) for row in rows),
         }
         self._set_component_cache("overview", result, ttl=15)
         return result
 
+    @staticmethod
+    def _board_limit(code: str, name: str = "") -> float:
+        """Return the daily price limit (%) for a stock given its code and name.
+
+        ST / *ST stocks have a 5% limit regardless of board. The name check
+        is done first so 创业板/科创板 ST stocks are not mis-classified as 20%.
+        """
+        if "ST" in (name or "").upper():
+            return 5.0  # ST / *ST
+        if code.startswith(("688", "689")):
+            return 20.0  # 科创板
+        if code.startswith(("300", "301", "302")):
+            return 20.0  # 创业板
+        if code.startswith(("43", "83", "87", "88", "92")):
+            return 30.0  # 北交所
+        return 10.0  # 主板
+
+    @staticmethod
+    def _limit_tolerance() -> float:
+        """Small tolerance for floating-point comparison against a limit price."""
+        return 0.055
+
+    def _is_limit_up(self, code: str, name: str, change_pct: float) -> bool:
+        return change_pct >= self._board_limit(code, name) - self._limit_tolerance()
+
+    def _is_limit_down(self, code: str, name: str, change_pct: float) -> bool:
+        return change_pct <= -(self._board_limit(code, name) - self._limit_tolerance())
+
     def _summarize_spots(
         self, spots: list[dict[str, Any]], overview_counts: dict[str, int]
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        changes = [self._number(row.get("f3")) for row in spots if row.get("f3") not in (None, "-")]
+        # Build a list of (code, name, change_pct) for board-aware limit detection.
+        stock_data: list[tuple[str, str, float]] = []
+        for row in spots:
+            code = str(row.get("f12") or "")
+            name = str(row.get("f14") or "")
+            raw = row.get("f3")
+            if raw not in (None, "-"):
+                try:
+                    stock_data.append((code, name, float(raw)))
+                except (TypeError, ValueError):
+                    pass
+
+        changes = [item[2] for item in stock_data]
         up = sum(1 for value in changes if value > 0.005)
         down = sum(1 for value in changes if value < -0.005)
         flat = max(0, len(changes) - up - down)
 
-        bins = [
-            ("跌停", lambda value: value <= -9.5),
-            ("≤-8", lambda value: -9.5 < value <= -8),
-            ("-8~-5", lambda value: -8 < value <= -5),
-            ("-5~-3", lambda value: -5 < value <= -3),
-            ("-3~-1", lambda value: -3 < value <= -1),
-            ("-1~0", lambda value: -1 < value < 0),
-            ("平", lambda value: -0.005 <= value <= 0.005),
-            ("0~1", lambda value: 0 < value < 1),
-            ("1~3", lambda value: 1 <= value < 3),
-            ("3~5", lambda value: 3 <= value < 5),
-            ("5~8", lambda value: 5 <= value < 8),
-            ("≥8", lambda value: 8 <= value < 9.5),
-            ("涨停", lambda value: value >= 9.5),
+        # Board-aware limit counts (handles 10%/20%/30%/5% boards correctly).
+        limit_up = sum(1 for code, name, pct in stock_data if self._is_limit_up(code, name, pct))
+        limit_down = sum(1 for code, name, pct in stock_data if self._is_limit_down(code, name, pct))
+
+        # Distribution histogram: the 涨停/跌停 bins use board-aware limits;
+        # the intermediate bins use simple percentage thresholds and exclude
+        # limit stocks so every stock is counted exactly once.
+        normal_bins: list[tuple[str, float, float]] = [
+            ("≤-8", -float("inf"), -8),
+            ("-8~-5", -8, -5),
+            ("-5~-3", -5, -3),
+            ("-3~-1", -3, -1),
+            ("-1~0", -1, -0.005),
+            ("平", -0.005, 0.005),
+            ("0~1", 0.005, 1),
+            ("1~3", 1, 3),
+            ("3~5", 3, 5),
+            ("5~8", 5, 8),
+            ("≥8", 8, float("inf")),
         ]
-        distribution = [
-            {"label": label, "count": sum(1 for value in changes if predicate(value))}
-            for label, predicate in bins
+        bucket_counts = {label: 0 for label, _, _ in normal_bins}
+        for code, name, pct in stock_data:
+            if self._is_limit_up(code, name, pct) or self._is_limit_down(code, name, pct):
+                continue
+            for label, lo, hi in normal_bins:
+                if lo < pct <= hi:
+                    bucket_counts[label] += 1
+                    break
+        distribution: list[dict[str, Any]] = [
+            {"label": "跌停", "count": limit_down},
+            *[{"label": label, "count": bucket_counts[label]} for label, _, _ in normal_bins],
+            {"label": "涨停", "count": limit_up},
         ]
+
         total_amount = sum(self._number(row.get("f6")) for row in spots)
 
         # Keep up/flat/down on one universe so cards match the histogram.
-        # Overview limit counts are preferred (handles 20%/5% boards better than ±9.5%).
         if len(changes) >= 4000:
             breadth_up, breadth_flat, breadth_down = up, flat, down
         elif overview_counts:
-            breadth_up = overview_counts.get("up") or up
-            breadth_down = overview_counts.get("down") or down
+            breadth_up = overview_counts["up"] if "up" in overview_counts else up
+            breadth_down = overview_counts["down"] if "down" in overview_counts else down
             breadth_flat = max(0, len(changes) - breadth_up - breadth_down) if changes else 0
         else:
             breadth_up, breadth_flat, breadth_down = up, flat, down
@@ -667,10 +726,8 @@ class MarketDataService:
             "up": breadth_up,
             "flat": breadth_flat,
             "down": breadth_down,
-            "limitUp": overview_counts.get("limitUp")
-            or sum(1 for value in changes if value >= 9.5),
-            "limitDown": overview_counts.get("limitDown")
-            or sum(1 for value in changes if value <= -9.5),
+            "limitUp": limit_up,
+            "limitDown": limit_down,
             "distribution": distribution,
         }
         turnover = {
