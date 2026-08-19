@@ -4,8 +4,8 @@
 - 行业与概念板块日内涨跌幅对比（含代表票）
 - 沪深成交额、全天预测、5/20/60 日均额
 - 上涨/下跌家数与涨跌幅分布
-- 涨停数量、跌停数量与涨停梯队
-
+- 涨停/跌停数量、市场热门高标地（连板排序）
+- 策略 A+ 筛选结果（每日收盘后从 ai-stock-cl 推送）
 
 ## 技术栈
 
@@ -64,7 +64,25 @@ make run
 
 - `GET /api/health`
 - `GET /api/market/dashboard?refresh=false`
+- `POST /api/strategy/a-plus` — 接收 ai-stock-cl 每日收盘后的 A+ 筛选结果（最多 10 只）
 - FastAPI 文档：`/docs`
+
+## 每日 A+ 结果推送
+
+部署到 Vercel 后，ai-stock-cl 项目的 `src/screen_strategy_a_plus.py` 支持
+`--publish-url` 参数，收盘后运行筛选器时自动把当日评分前 10 的标的 POST 到
+仪表盘：
+
+```bash
+cd /Users/bobo/Desktop/project/ai-stock-cl
+python src/screen_strategy_a_plus.py \
+  --output runs/a_plus_$(date +%Y%m%d).json \
+  --publish-url https://lao-a.bobotou118.dpdns.org/api/strategy/a-plus
+```
+
+本机开发模式下，后端会直接读取 ai-stock-cl `runs/` 目录下最新的
+`a_plus_*.json` 文件（可用 `A_STOCK_CL_RUNS_DIR` 环境变量覆盖路径），
+无需推送。
 
 ## 部署到 Vercel
 
