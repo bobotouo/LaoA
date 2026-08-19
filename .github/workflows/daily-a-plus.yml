@@ -1,0 +1,61 @@
+name: Daily A+ Picks
+
+# 每个交易日收盘后自动运行 A+ 策略筛选，并把评分前 10 标的推送到仪表盘。
+# 北京时间 16:30 = UTC 08:30（GitHub Actions 的 schedule 使用 UTC）。
+on:
+  schedule:
+    - cron: "30 8 * * 1-5"   # 周一至周五 08:30 UTC / 16:30 北京
+  workflow_dispatch: {}        # 支持手动触发（Actions 页面 "Run workflow"）
+
+concurrency:
+  group: daily-a-plus
+  cancel-in-progress: false
+
+env:
+  A_SHARE_WEB_WORKERS: "16"
+
+jobs:
+  screen:
+    name: A+ Screener
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas
+
+      - name: Verify data sources import
+        run: |
+          python -c "import sys; sys.path.insert(0, 'strategy'); import data_sources.free_web_adapter"
+
+      - name: Run A+ screener and publish top 10
+        run: |
+          TODAY="$(date +%F)"
+          mkdir -p runs
+          cd strategy
+          python screen_strategy_a_plus.py \
+            --end "$TODAY" \
+            --source free-web \
+            --output "../runs/a_plus_$(date +%Y%m%d).json" \
+            --publish-url "https://lao-a.bobotou118.dpdns.org/api/strategy/a-plus"
+        env:
+          # 免费 web 数据源通过新浪/腾讯/东财公开接口抓取，无需令牌
+          A_SHARE_WEB_WORKERS: "16"
+          # 强制北京时间，避免 UTC 跨天导致 --end 日期错误
+          TZ: "Asia/Shanghai"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: a-plus-results
+          path: runs/
+          if-no-files-found: warn
