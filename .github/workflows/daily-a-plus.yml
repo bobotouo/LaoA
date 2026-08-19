@@ -45,6 +45,8 @@ jobs:
           python screen_strategy_a_plus.py \
             --end "$TODAY" \
             --source free-web \
+            --exclude-bse \
+            --exclude-star \
             --output "../runs/a_plus_$(date +%Y%m%d).json" \
             --publish-url "https://lao-a.bobotou118.dpdns.org/api/strategy/a-plus"
         env:

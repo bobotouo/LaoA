@@ -283,6 +283,22 @@ class FreeWebAdapter:
             if klines:
                 return {"_provider": "tencent", "klines": klines}
             last_error = str(payload)[:100]
+        # 兜底: 所有 IP 直连失败时尝试直接 DNS 解析（适用于海外 runner）
+        try:
+            direct = subprocess.run(
+                ["curl", "--max-time", "20", "--silent", "--show-error", url],
+                capture_output=True, text=True, check=False,
+            )
+            if direct.returncode == 0:
+                payload = json.loads(direct.stdout)
+                klines = ((payload.get("data") or {}).get(raw_symbol) or {}).get(key) or []
+                if klines:
+                    return {"_provider": "tencent", "klines": klines}
+                last_error = str(payload)[:100]
+            else:
+                last_error = direct.stderr.strip() or last_error
+        except Exception as exc:
+            last_error = str(exc)
         raise RuntimeError(f"Tencent request failed for {code}: {last_error}")
 
     def _fetch_eastmoney_payload(
@@ -327,6 +343,21 @@ class FreeWebAdapter:
             if payload.get("data") is not None:
                 return payload
             last_error = str(payload)[:100]
+        # 兜底: 所有 IP 直连失败时尝试直接 DNS 解析（适用于海外 runner）
+        try:
+            direct = subprocess.run(
+                ["curl", "--max-time", "20", "--silent", "--show-error", url],
+                capture_output=True, text=True, check=False,
+            )
+            if direct.returncode == 0:
+                payload = json.loads(direct.stdout)
+                if payload.get("data") is not None:
+                    return payload
+                last_error = str(payload)[:100]
+            else:
+                last_error = direct.stderr.strip() or last_error
+        except Exception as exc:
+            last_error = str(exc)
         raise RuntimeError(f"EastMoney request failed for {code}: {last_error}")
 
     def _download_sina_pages(self) -> None:

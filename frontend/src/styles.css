@@ -174,7 +174,7 @@ h1 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 38px); letter-spacing: -0.045e
 .side-stack { display: grid; gap: 13px; grid-template-rows: auto 1fr; }
 .turnover-main { font-size: 34px; font-weight: 760; letter-spacing: -.05em; margin-top: 18px; font-variant-numeric: tabular-nums; }
 .turnover-caption { color: var(--muted); font-size: 12px; margin-top: 2px; }
-.average-grid { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 18px; border-top: 1px solid #edf0f3; padding-top: 13px; gap: 10px; }
+.average-grid { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 18px; border-top: 1px solid #edf0f3; padding-top: 13px; gap: 10px; }
 .average-grid div { min-width: 0; }
 .average-grid span { display: block; color: #8a95a2; font-size: 11px; }
 .average-grid strong { display: block; margin-top: 4px; font-size: 13px; font-variant-numeric: tabular-nums; }

@@ -410,18 +410,24 @@ def main() -> int:
         args.output.write_text(output + "\n", encoding="utf-8")
     matches = int(result["match"].sum()) if not result.empty else 0
     if args.publish_url and not result.empty:
-        # Only push when the screener actually produced today's data;
-        # weekend/holiday runs return stale dates and must not overwrite the
-        # dashboard with old picks.
+        # 允许数据源最新日期比 --end 最晚 3 个自然日
+        # （覆盖盘中触发、节假日、数据源延迟等场景）
+        from datetime import date as _date
         data_dates = {
             str(row.get("data_date", ""))[:10]
             for row in result.to_dict(orient="records")
             if row.get("data_date")
         }
-        if data_dates and max(data_dates) == args.end:
-            _publish_top_picks(args.publish_url, result)
+        if data_dates:
+            max_date = max(data_dates)
+            end_dt = _date.fromisoformat(args.end)
+            data_dt = _date.fromisoformat(max_date)
+            if max_date >= args.end or abs((end_dt - data_dt).days) <= 3:
+                _publish_top_picks(args.publish_url, result)
+            else:
+                print(f"publish_a_plus=skipped data_date={max_date} too old vs end={args.end} (diff={abs((end_dt - data_dt).days)}d)")
         else:
-            print(f"publish_a_plus=skipped data_date={max(data_dates) if data_dates else 'none'} != end={args.end}")
+            print(f"publish_a_plus=skipped no data_date in result")
     print(f"universe={len(codes)} history_codes={history['code'].nunique()} liquidity_passed={len(result)} matches={matches}")
     cols = ["score", "full_code", "name", "price", "shape_score", "ma20_ok", "macd_ok", "shape_ok", "avg_amount_5d_yi", "volume_ratio_5d", "turnover_rate", "match"]
     cols = [c for c in cols if c in result.columns]

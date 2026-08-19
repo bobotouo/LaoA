@@ -442,6 +442,7 @@ function App() {
             <div className="turnover-main">{formatMoney(turnover.current)}</div>
             <div className="turnover-caption">全天预测 {formatMoney(turnover.forecast)}</div>
             <div className="average-grid">
+              <div><span>昨日</span><strong>{formatMoney(turnover.previous)}</strong></div>
               <div><span>5日均</span><strong>{formatMoney(turnover.avg5)}</strong></div>
               <div><span>20日均</span><strong>{formatMoney(turnover.avg20)}</strong></div>
               <div><span>60日均</span><strong>{formatMoney(turnover.avg60)}</strong></div>
