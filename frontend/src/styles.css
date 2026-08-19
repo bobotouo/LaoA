@@ -186,6 +186,10 @@ h1 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 38px); letter-spacing: -0.045e
 .breadth-chart { height: 270px; margin-top: 4px; }
 
 .limit-panel { margin-top: 13px; }
+.aplus-panel { margin-top: 13px; }
+.picks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-top: 13px; align-items: start; }
+.empty-row { text-align: center; color: #9aa3ad; padding: 24px 12px; font-size: 13px; }
+.aplus-table small { color: #9aa3ad; margin-left: 4px; }
 .panel-summary { color: var(--muted); font-size: 12px; }
 .table-wrap { overflow-x: auto; margin-top: 13px; -webkit-overflow-scrolling: touch; }
 table.limit-table { width: 100%; border-collapse: collapse; min-width: 720px; }
@@ -252,6 +256,7 @@ footer { color: #929ca7; font-size: 11px; text-align: center; padding: 19px 12px
   .turnover-main { font-size: 28px; margin-top: 12px; }
   .breadth-chart { height: 220px; }
   .breadth-numbers { font-size: 12px; }
+  .picks-grid { grid-template-columns: 1fr; gap: 10px; }
   .limit-panel { margin-top: 10px; }
   .table-wrap { overflow: visible; }
   table.limit-table { min-width: 0; }

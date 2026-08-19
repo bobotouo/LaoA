@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from .data_service import MarketDataError, MarketDataService
 
@@ -22,7 +23,7 @@ app.add_middleware(
     ],
     allow_origin_regex=r"https://.*\.(vercel\.app|dpdns\.org)",
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET","POST"],
     allow_headers=["*"],
 )
 
@@ -56,6 +57,32 @@ def dashboard(response: Response, refresh: bool = Query(default=False)) -> dict:
                 f"s-maxage={ttl}, stale-while-revalidate=60"
             )
     return result
+
+
+class APlusPick(BaseModel):
+    full_code: str
+    name: str
+    price: float = 0.0
+    score: float = 0.0
+    shape_score: float = 0.0
+    ma20_ok: bool = False
+    macd_ok: bool = False
+    shape_ok: bool = False
+    avg_amount_5d_yi: float = 0.0
+    turnover_rate: float = 0.0
+    data_date: str = ""
+
+
+@app.post("/api/strategy/a-plus")
+@app.post("/strategy/a-plus")
+def upload_a_plus_picks(picks: list[APlusPick]) -> dict:
+    """Receive strategy A+ screening results (daily, post-close).
+
+    The ai-stock-cl project runs the A+ screener after market close and POSTs
+    the top candidates here so the deployed dashboard can display them.
+    """
+    service.save_a_plus_picks([pick.model_dump() for pick in picks[:10]])
+    return {"status": "ok", "count": min(len(picks), 10)}
 
 
 # Local `make run` still serves the Vite build. On Vercel, static files come from /public.

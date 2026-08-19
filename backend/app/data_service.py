@@ -22,6 +22,14 @@ from .finshare_provider import FinshareProvider
 
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 SECTOR_SOURCE = "东方财富板块（行业 BK / 概念 BK）"
+# Path to the ai-stock-cl project's runs/ directory, used to read daily
+# strategy A+ screening results. Override with the A_STOCK_CL_RUNS_DIR env var.
+DEFAULT_RUNS_DIR = Path("/Users/bobo/Desktop/project/ai-stock-cl/runs")
+
+
+def _runs_dir() -> Path:
+    env = os.getenv("A_STOCK_CL_RUNS_DIR", "").strip()
+    return Path(env) if env else DEFAULT_RUNS_DIR
 
 
 def default_last_dashboard_path() -> Path:
@@ -29,6 +37,17 @@ def default_last_dashboard_path() -> Path:
     if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
         return Path("/tmp/laoa/last_dashboard.json")
     return Path(__file__).resolve().parents[1] / ".cache" / "last_dashboard.json"
+
+
+def default_a_plus_cache_path() -> Path:
+    """Local cache copy of the latest A+ screening picks.
+
+    On Vercel the filesystem is ephemeral and ai-stock-cl is not co-located,
+    so we mirror the picks into /tmp via the /api/strategy/a-plus endpoint.
+    """
+    if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        return Path("/tmp/laoa/a_plus_picks.json")
+    return Path(__file__).resolve().parents[1] / ".cache" / "a_plus_picks.json"
 
 
 class MarketDataError(RuntimeError):
@@ -113,7 +132,13 @@ class MarketDataService:
             self._cache[key] = CacheEntry(result, now + ttl)
         return result
 
-    def _request_json(self, url: str, params: dict[str, Any]) -> dict[str, Any]:
+    def _request_json(self, url: str, params: dict[str, Any], check=None) -> dict[str, Any]:
+        """Fetch JSON from the best available host for a URL.
+
+        `check` is an optional predicate on the parsed JSON; candidates that
+        return valid JSON but fail the check (e.g. empty klines) are skipped
+        so a healthy host with empty data cannot shadow a working one.
+        """
         last_error: Exception | None = None
         for candidate in self._request_candidates(url):
             try:
@@ -121,18 +146,21 @@ class MarketDataService:
                 response.raise_for_status()
                 text = response.text.strip()
                 try:
-                    return response.json()
+                    payload = response.json()
                 except requests.JSONDecodeError:
                     start = text.find("{")
                     end = text.rfind("}")
                     if start >= 0 and end > start:
-                        return json.loads(text[start : end + 1])
-                    raise MarketDataError(f"行情接口返回格式异常（{candidate}）")
+                        payload = json.loads(text[start : end + 1])
+                    else:
+                        raise MarketDataError(f"行情接口返回格式异常（{candidate}）")
+                if check is None or check(payload):
+                    return payload
+                last_error = MarketDataError(f"行情接口返回空数据（{candidate}）")
             except (requests.RequestException, MarketDataError, json.JSONDecodeError) as exc:
                 last_error = exc
 
         raise MarketDataError(f"行情接口暂不可用（{urlsplit(url).hostname or url}）：{last_error}") from last_error
-
     @staticmethod
     def _request_candidates(url: str) -> list[str]:
         """Prefer East Money hosts that currently accept shared/cloud egress.
@@ -151,15 +179,26 @@ class MarketDataService:
                 "push2ex.eastmoney.com",
                 "82.push2ex.eastmoney.com",
             ]
-        elif "push2his" in hostname or "push2" in hostname:
+        elif "push2his" in hostname:
+            # Historical kline data only exists on push2his hosts. push2delay
+            # serves the same paths but returns empty klines, so it must come
+            # AFTER push2his, otherwise real history is never reached.
+            hosts = [
+                preferred,
+                "push2his.eastmoney.com",
+                "82.push2his.eastmoney.com",
+                "push2delay.eastmoney.com",
+                "push2.eastmoney.com",
+                "82.push2.eastmoney.com",
+                "60.push2.eastmoney.com",
+            ]
+        elif "push2" in hostname:
             hosts = [
                 preferred,
                 "push2delay.eastmoney.com",
                 "push2.eastmoney.com",
                 "82.push2.eastmoney.com",
                 "60.push2.eastmoney.com",
-                "push2his.eastmoney.com",
-                "82.push2his.eastmoney.com",
             ]
         else:
             return [url]
@@ -203,6 +242,14 @@ class MarketDataService:
             limit_pool = self._fetch_limit_pool(spots)
         except Exception:
             limit_pool = self._get_component_cache("limit-pool", allow_stale=True) or []
+        try:
+            hot_leaders = self._fetch_hot_leaders(spots)
+        except Exception:
+            hot_leaders = self._get_component_cache("hot-leaders", allow_stale=True) or []
+        try:
+            a_plus_picks = self._fetch_a_plus_picks()
+        except Exception:
+            a_plus_picks = {"picks": [], "source": "策略 A+ · ai-stock-cl", "updatedAt": "", "total": 0}
         now = datetime.now(SHANGHAI_TZ)
 
         is_trading = self._is_trading_time(now)
@@ -232,6 +279,8 @@ class MarketDataService:
             "breadth": breadth,
             "turnover": turnover,
             "limitPool": limit_pool,
+            "hotLeaders": hot_leaders,
+            "aPlusPicks": a_plus_picks,
         }
 
     def _fetch_indices(self) -> list[dict[str, Any]]:
@@ -651,6 +700,14 @@ class MarketDataService:
                 for day, amount in daily.items():
                     by_date[day] = by_date.get(day, 0) + amount
 
+        # Drop today's in-progress row while the market is open (including the
+        # lunch break), so averages and the day-over-day delta only compare
+        # completed trading days. After the close the full day row is kept.
+        now = datetime.now(SHANGHAI_TZ)
+        if day_time(9, 15) <= now.time() <= day_time(15, 0):
+            today_str = now.strftime("%Y-%m-%d")
+            by_date.pop(today_str, None)
+
         amounts = [amount for _, amount in sorted(by_date.items()) if amount > 0]
         if not amounts:
             return {"previous": 0, "delta": 0, "avg5": 0, "avg20": 0, "avg60": 0}
@@ -666,24 +723,219 @@ class MarketDataService:
         return result
 
     def _fetch_daily_amounts(self, secid: str) -> dict[str, float]:
-        payload = self._request_json(
-            "https://push2delay.eastmoney.com/api/qt/stock/kline/get",
-            {
-                "secid": secid,
-                "klt": 101,
-                "fqt": 0,
-                "lmt": 70,
-                "end": "20500101",
-                "fields1": "f1,f2,f3,f4,f5,f6",
-                "fields2": "f51,f52,f53,f54,f55,f56,f57",
-            },
-        )
+        """Fetch daily turnover (amount) history for an index secid.
+
+        Primary source is push2his (historical K-line host, more stable than
+        push2delay on cloud egress). The `check` callback ensures that empty
+        klines returned by push2delay do not shadow real data on push2his.
+        Falls back to Tencent newfqkline when East Money is unreachable.
+        """
+        try:
+            payload = self._request_json(
+                "https://push2his.eastmoney.com/api/qt/stock/kline/get",
+                {
+                    "secid": secid,
+                    "klt": 101,
+                    "fqt": 0,
+                    "lmt": 70,
+                    "end": "20500101",
+                    "fields1": "f1,f2,f3,f4,f5,f6",
+                    "fields2": "f51,f52,f53,f54,f55,f56,f57",
+                },
+                check=lambda p: bool((p.get("data") or {}).get("klines")),
+            )
+            result = {}
+            for row in (payload.get("data") or {}).get("klines") or []:
+                parts = str(row).split(",")
+                if len(parts) > 6:
+                    result[parts[0]] = self._number(parts[6])
+            if result:
+                return result
+        except Exception:
+            pass
+        return self._fetch_daily_amounts_tencent(secid)
+    def _fetch_daily_amounts_tencent(self, secid: str) -> dict[str, float]:
+        """Tencent daily-K fallback for turnover history.
+
+        Uses the `newfqkline` endpoint instead of plain `fqkline`: for indices
+        the new endpoint includes the daily amount at row index 8 (in 万元),
+        while the old endpoint only returns 6 fields (no amount).
+        """
+        em_to_tencent = {
+            "1.000001": "sh000001",
+            "0.399106": "sz399106",
+        }
+        tencent_code = em_to_tencent.get(secid)
+        if not tencent_code:
+            return {}
+        url = "https://web.ifzq.gtimg.cn/appstock/app/newfqkline/get"
+        params = {"param": f"{tencent_code},day,,,70,qfq"}
+        try:
+            response = self.session.get(url, params=params, timeout=self.timeout)
+            response.raise_for_status()
+            payload = response.json()
+        except Exception:
+            return {}
+        data = payload.get("data") or {}
+        stock_data = data.get(tencent_code) or data.get(list(data.keys())[0] if data else "") or {}
+        days = stock_data.get("day") or stock_data.get("qfqday") or []
         result = {}
-        for row in (payload.get("data") or {}).get("klines") or []:
-            parts = str(row).split(",")
-            if len(parts) > 6:
-                result[parts[0]] = self._number(parts[6])
+        for row in days:
+            if isinstance(row, list) and len(row) > 8:
+                # newfqkline row: [date, open, close, high, low, volume, ?,
+                # pct_chg, amount(万元), ...]
+                result[str(row[0])] = self._number(row[8]) * 10000
         return result
+
+    def _fetch_a_plus_picks(self) -> dict[str, Any]:
+        """Read strategy A+ screening results from ai-stock-cl.
+
+        Tries, in order:
+          1. Local cache mirror (written by /api/strategy/a-plus on Vercel)
+          2. ai-stock-cl runs/a_plus_YYYYMMDD.json (today)
+          3. ai-stock-cl runs/ — most recent a_plus_*.json (local dev only)
+
+        Returns up to 10 candidates sorted by score desc.
+        """
+        cached = self._get_component_cache("a-plus-picks")
+        if cached is not None:
+            return cached
+        records: list[dict[str, Any]] = []
+        # 1. local cache mirror
+        candidate_paths: list[Path] = [default_a_plus_cache_path()]
+        # 2. today's file in ai-stock-cl runs dir
+        runs = _runs_dir()
+        today = datetime.now(SHANGHAI_TZ).strftime("%Y%m%d")
+        candidate_paths.append(runs / f"a_plus_{today}.json")
+        # 3. most recent a_plus_*.json files in runs dir
+        try:
+            if runs.is_dir():
+                matches = sorted(runs.glob("a_plus_*.json"), reverse=True)
+                candidate_paths.extend(matches[:5])
+        except OSError:
+            pass
+        for candidate_path in candidate_paths:
+            try:
+                if candidate_path.exists():
+                    raw = json.loads(candidate_path.read_text(encoding="utf-8"))
+                    if isinstance(raw, list) and raw:
+                        records = raw
+                        break
+            except (OSError, json.JSONDecodeError, TypeError):
+                continue
+        picks: list[dict[str, Any]] = []
+        for row in sorted(records, key=lambda r: self._number(r.get("score")), reverse=True)[:10]:
+            picks.append(
+                {
+                    "code": str(row.get("full_code") or row.get("code") or ""),
+                    "name": str(row.get("name") or ""),
+                    "price": self._number(row.get("price")),
+                    "score": int(self._number(row.get("score"))),
+                    "shapeScore": round(self._number(row.get("shape_score")), 2),
+                    "ma20Ok": bool(row.get("ma20_ok")),
+                    "macdOk": bool(row.get("macd_ok")),
+                    "shapeOk": bool(row.get("shape_ok")),
+                    "avgAmount5d": round(self._number(row.get("avg_amount_5d_yi")), 2),
+                    "turnoverRate": round(self._number(row.get("turnover_rate")), 2),
+                    "dataDate": str(row.get("data_date") or ""),
+                }
+            )
+        # Use the most recent data_date from the records for updatedAt
+        data_date = ""
+        for row in records:
+            if row.get("data_date"):
+                data_date = str(row["data_date"])
+                break
+        result = {
+            "picks": picks,
+            "updatedAt": data_date or datetime.now(SHANGHAI_TZ).isoformat(timespec="seconds"),
+            "source": "策略 A+ · ai-stock-cl",
+            "total": len(records),
+        }
+        self._set_component_cache("a-plus-picks", result, ttl=300)
+        return result
+
+    def save_a_plus_picks(self, picks: list[dict[str, Any]]) -> None:
+        """Persist A+ picks uploaded via the API (used on Vercel)."""
+        cache_path = default_a_plus_cache_path()
+        try:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cache_path.write_text(json.dumps(picks, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass
+        with self._lock:
+            self._component_cache.pop("a-plus-picks", None)
+
+    def _fetch_hot_leaders(self, spots: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """市场热门高标地: 按涨幅排序取连板/高涨幅标的，最多10只。
+
+        优先使用东财涨停池的连板数据；若不可用则从全市场快照里取涨幅
+        最高且成交活跃的个股作为市场高标代表。
+        """
+        cached = self._get_component_cache("hot-leaders")
+        if cached is not None:
+            return cached
+        now = datetime.now(SHANGHAI_TZ)
+        leaders: list[dict[str, Any]] = []
+        # 1. East Money limit-up pool (has consecutive board count)
+        try:
+            payload = self._request_json(
+                "https://push2ex.eastmoney.com/getTopicZTPool",
+                {
+                    "ut": "7eea3edcaed734bea9cbfc24409ed989",
+                    "dpt": "wz.ztzt",
+                    "Pageindex": 0,
+                    "pagesize": 30,
+                    "sort": "lbc:desc",
+                    "date": now.strftime("%Y%m%d"),
+                },
+            )
+            pool = (payload.get("data") or {}).get("pool") or []
+            for row in pool[:10]:
+                leaders.append(
+                    {
+                        "code": str(row.get("c") or ""),
+                        "name": str(row.get("n") or ""),
+                        "changePct": self._number(row.get("zdp")),
+                        "consecutive": int(self._number(row.get("lbc"))) or 1,
+                        "industry": str(row.get("hybk") or "--"),
+                        "amount": self._number(row.get("amount")),
+                        "firstLimitTime": self._format_limit_time(row.get("fbt")),
+                    }
+                )
+        except Exception:
+            pass
+        # 2. Fallback: top gainers from spot snapshot (any day, even weak ones)
+        if not leaders and spots:
+            candidates = sorted(
+                spots,
+                key=lambda row: (
+                    self._number(row.get("f3")),
+                    self._number(row.get("f6")),
+                ),
+                reverse=True,
+            )
+            for row in candidates:
+                change = self._number(row.get("f3"))
+                # Prefer strong gainers; on weak tape days (few 5%+ names)
+                # still surface the relative leaders.
+                if change <= 0:
+                    break
+                leaders.append(
+                    {
+                        "code": str(row.get("f12") or ""),
+                        "name": str(row.get("f14") or ""),
+                        "changePct": change,
+                        "consecutive": 1,
+                        "industry": "--",
+                        "amount": self._number(row.get("f6")),
+                        "firstLimitTime": "--",
+                    }
+                )
+                if len(leaders) >= 10:
+                    break
+        self._set_component_cache("hot-leaders", leaders, ttl=30)
+        return leaders
 
     def _fetch_limit_pool(self, spots: list[dict[str, Any]]) -> list[dict[str, Any]]:
         cached = self._get_component_cache("limit-pool")

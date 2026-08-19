@@ -351,7 +351,7 @@ function App() {
     );
   }
 
-  const { meta, indices, breadth, turnover, limitPool } = data;
+  const { meta, indices, breadth, turnover, limitPool, hotLeaders = [], aPlusPicks = {} } = data;
   const updatedAt = new Date(meta.updatedAt).toLocaleTimeString("zh-CN", { hour12: false });
   const downRatio = breadth.down / Math.max(1, breadth.up + breadth.flat + breadth.down);
 
@@ -473,41 +473,89 @@ function App() {
         </aside>
       </main>
 
-      <section className="panel limit-panel">
-        <div className="panel-heading">
-          <div>
-            <span className="panel-kicker">LIMIT-UP POOL</span>
-            <h2>涨停梯队</h2>
+      <div className="picks-grid">
+        <section className="panel limit-panel">
+          <div className="panel-heading">
+            <div>
+              <span className="panel-kicker">HOT LEADERS</span>
+              <h2>市场热门高标地</h2>
+            </div>
+            <span className="panel-summary">当前展示 {hotLeaders.length} 只</span>
           </div>
-          <span className="panel-summary">当前展示 {limitPool.length} 只</span>
-        </div>
-        <div className="table-wrap">
-          <table className="limit-table">
-            <thead>
-              <tr>
-                <th>股票</th>
-                <th>涨幅</th>
-                <th>连板</th>
-                <th>行业</th>
-                <th>成交额</th>
-                <th>首次封板</th>
-              </tr>
-            </thead>
-            <tbody>
-              {limitPool.map((stock) => (
-                <tr key={`${stock.code}-${stock.name}`}>
-                  <td data-label="股票"><strong>{stock.name}</strong><small>{stock.code}</small></td>
-                  <td data-label="涨幅" className="trend-up">{signed(stock.changePct, 2)}%</td>
-                  <td data-label="连板"><span className="board-badge">{stock.consecutive}板</span></td>
-                  <td data-label="行业">{stock.industry}</td>
-                  <td data-label="成交额">{formatMoney(stock.amount)}</td>
-                  <td data-label="首次封板">{stock.firstLimitTime}</td>
+          <div className="table-wrap">
+            <table className="limit-table">
+              <thead>
+                <tr>
+                  <th>股票</th>
+                  <th>涨幅</th>
+                  <th>连板</th>
+                  <th>行业</th>
+                  <th>成交额</th>
+                  <th>首次封板</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody>
+                {hotLeaders.map((stock) => (
+                  <tr key={`${stock.code}-${stock.name}`}>
+                    <td data-label="股票"><strong>{stock.name}</strong><small>{stock.code}</small></td>
+                    <td data-label="涨幅" className="trend-up">{signed(stock.changePct, 2)}%</td>
+                    <td data-label="连板"><span className="board-badge">{stock.consecutive}板</span></td>
+                    <td data-label="行业">{stock.industry}</td>
+                    <td data-label="成交额">{formatMoney(stock.amount)}</td>
+                    <td data-label="首次封板">{stock.firstLimitTime}</td>
+                  </tr>
+                ))}
+                {!hotLeaders.length ? (
+                  <tr><td colSpan={6} className="empty-row">暂无高标数据</td></tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="panel aplus-panel">
+          <div className="panel-heading">
+            <div>
+              <span className="panel-kicker">STRATEGY A+</span>
+              <h2>策略 A+ 筛选结果</h2>
+            </div>
+            <span className="panel-summary">
+              {(aPlusPicks.picks || []).length} 只 · {aPlusPicks.updatedAt ? new Date(aPlusPicks.updatedAt).toLocaleDateString("zh-CN") : "--"}
+            </span>
+          </div>
+          <div className="table-wrap">
+            <table className="limit-table aplus-table">
+              <thead>
+                <tr>
+                  <th>股票</th>
+                  <th>评分</th>
+                  <th>形态</th>
+                  <th>MA20</th>
+                  <th>MACD</th>
+                  <th>5日均额</th>
+                  <th>换手</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(aPlusPicks.picks || []).map((stock) => (
+                  <tr key={`${stock.code}-${stock.name}`}>
+                    <td data-label="股票"><strong>{stock.name}</strong><small>{stock.code}</small></td>
+                    <td data-label="评分"><span className="board-badge">{stock.score}分</span></td>
+                    <td data-label="形态">{stock.shapeOk ? "✓" : "--"} <small>{stock.shapeScore}</small></td>
+                    <td data-label="MA20">{stock.ma20Ok ? "✓" : "✗"}</td>
+                    <td data-label="MACD">{stock.macdOk ? "✓" : "✗"}</td>
+                    <td data-label="5日均额">{stock.avgAmount5d}亿</td>
+                    <td data-label="换手">{stock.turnoverRate}%</td>
+                  </tr>
+                ))}
+                {!(aPlusPicks.picks || []).length ? (
+                  <tr><td colSpan={7} className="empty-row">收盘后更新 A+ 筛选结果</td></tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
 
       <footer>
         数据仅供研究与产品开发，不构成投资建议。公开行情接口可能延迟或中断，商业发布前应接入授权数据源。
