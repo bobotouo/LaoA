@@ -57,6 +57,9 @@ jobs:
           # 海外 runner 无法直连新浪(连接超时)。股票列表改经已部署的 Vercel API 中转：
           # Vercel 能访问东财全市场快照，且 GitHub Actions 能访问该域名。
           STOCK_LIST_URL: "https://lao-a.bobotou118.dpdns.org/api/market/stock-list"
+          # 东财优先(含换手率)，但只快速试 1 个 IP、6 秒超时，失败立即回退腾讯 newfqkline
+          EASTMONEY_MAX_IPS: "1"
+          EASTMONEY_CURL_TIMEOUT: "6"
 
       - name: Upload results
         uses: actions/upload-artifact@v4

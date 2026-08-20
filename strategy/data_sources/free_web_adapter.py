@@ -255,10 +255,11 @@ class FreeWebAdapter:
             payload = json.loads(cache_file.read_text(encoding="utf-8"))
         else:
             try:
-                payload = self._fetch_tencent_payload(code, start, end, adjust)
+                # 东财优先（含 turn_over_rate），腾讯 newfqkline 兜底（无换手率）
+                payload = self._fetch_eastmoney_payload(code, start, end, adjust)
             except Exception:
                 try:
-                    payload = self._fetch_eastmoney_payload(code, start, end, adjust)
+                    payload = self._fetch_tencent_payload(code, start, end, adjust)
                 except Exception:
                     payload = {"_provider": "sina", "klines": self._fetch_sina_payload(code, start, end)}
             if self._payload_has_bars(payload):
@@ -439,13 +440,16 @@ class FreeWebAdapter:
         ips = [item.strip() for item in configured.split(",") if item.strip()]
         ips.extend(ip for ip in EASTMONEY_FALLBACK_IPS if ip not in ips)
         last_error = "no endpoint attempted"
-        for ip in ips:
+        # 当作为主数据源时限制 IP 尝试次数与超时，避免海外 runner 慢吞吞
+        max_ips = min(len(ips), int(os.getenv("EASTMONEY_MAX_IPS", "3")))
+        curl_timeout = os.getenv("EASTMONEY_CURL_TIMEOUT", "8")
+        for ip in ips[:max_ips]:
             command = [
                 "curl",
                 "--resolve",
                 f"{EASTMONEY_HOST}:443:{ip}",
                 "--max-time",
-                "15",
+                curl_timeout,
                 "--silent",
                 "--show-error",
                 url,
@@ -465,7 +469,7 @@ class FreeWebAdapter:
         # 兜底: 所有 IP 直连失败时尝试直接 DNS 解析（适用于海外 runner）
         try:
             direct = subprocess.run(
-                ["curl", "--max-time", "20", "--silent", "--show-error", url],
+                ["curl", "--max-time", "15", "--silent", "--show-error", url],
                 capture_output=True, text=True, check=False,
             )
             if direct.returncode == 0:

@@ -530,11 +530,11 @@ function App() {
                 <tr>
                   <th>股票</th>
                   <th>评分</th>
-                  <th>形态</th>
                   <th>MA20</th>
                   <th>MACD</th>
                   <th>5日均额</th>
                   <th>换手</th>
+                  <th>今日涨幅</th>
                 </tr>
               </thead>
               <tbody>
@@ -542,11 +542,11 @@ function App() {
                   <tr key={`${stock.code}-${stock.name}`}>
                     <td data-label="股票"><strong>{stock.name}</strong><small>{stock.code}</small></td>
                     <td data-label="评分"><span className="board-badge">{stock.score}分</span></td>
-                    <td data-label="形态">{stock.shapeOk ? "✓" : "--"} <small>{stock.shapeScore}</small></td>
                     <td data-label="MA20">{stock.ma20Ok ? "✓" : "✗"}</td>
                     <td data-label="MACD">{stock.macdOk ? "✓" : "✗"}</td>
                     <td data-label="5日均额">{stock.avgAmount5d}亿</td>
                     <td data-label="换手">{stock.turnoverRate}%</td>
+                    <td data-label="今日涨幅" className={trendClass(stock.changePct)}>{signed(stock.changePct, 2)}%</td>
                   </tr>
                 ))}
                 {!(aPlusPicks.picks || []).length ? (

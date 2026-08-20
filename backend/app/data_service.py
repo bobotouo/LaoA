@@ -591,7 +591,7 @@ class MarketDataService:
             "invt": 2,
             "fid": "f3",
             "fs": "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048",
-            "fields": "f2,f3,f6,f12,f14",
+            "fields": "f2,f3,f6,f8,f12,f14",
         }
         payload = self._request_json(endpoint, {**base_params, "pn": 1, "pz": 6000})
         data = payload.get("data") or {}
@@ -918,19 +918,33 @@ class MarketDataService:
             except (OSError, json.JSONDecodeError, TypeError):
                 continue
         picks: list[dict[str, Any]] = []
+        # 从全市场快照中获取实时行情(涨幅、换手率)，让筛选结果跟随刷新
+        live_lookup: dict[str, dict[str, Any]] = {}
+        try:
+            for row in self._fetch_spot_market():
+                code = str(row.get("f12") or "")
+                if code:
+                    live_lookup[code] = {
+                        "change_pct": self._number(row.get("f3")),
+                        "turnover_rate": self._number(row.get("f8")),
+                    }
+        except Exception:
+            pass
         for row in sorted(records, key=lambda r: self._number(r.get("score")), reverse=True)[:10]:
+            full_code = str(row.get("full_code") or row.get("code") or "")
+            code = full_code.partition(".")[0]
+            live = live_lookup.get(code, {})
             picks.append(
                 {
-                    "code": str(row.get("full_code") or row.get("code") or ""),
+                    "code": full_code,
                     "name": str(row.get("name") or ""),
                     "price": self._number(row.get("price")),
                     "score": int(self._number(row.get("score"))),
-                    "shapeScore": round(self._number(row.get("shape_score")), 2),
                     "ma20Ok": bool(row.get("ma20_ok")),
                     "macdOk": bool(row.get("macd_ok")),
-                    "shapeOk": bool(row.get("shape_ok")),
                     "avgAmount5d": round(self._number(row.get("avg_amount_5d_yi")), 2),
-                    "turnoverRate": round(self._number(row.get("turnover_rate")), 2),
+                    "turnoverRate": round(self._number(row.get("turnover_rate")), 2) if self._number(row.get("turnover_rate")) else round(live.get("turnover_rate") or 0, 2),
+                    "changePct": round(live.get("change_pct") or 0, 2),
                     "dataDate": str(row.get("data_date") or ""),
                 }
             )
