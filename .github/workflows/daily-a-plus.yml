@@ -7,6 +7,9 @@ on:
     - cron: "30 8 * * 1-5"   # 周一至周五 08:30 UTC / 16:30 北京
   workflow_dispatch: {}        # 支持手动触发（Actions 页面 "Run workflow"）
 
+permissions:
+  contents: write
+
 concurrency:
   group: daily-a-plus
   cancel-in-progress: false
@@ -67,3 +70,11 @@ jobs:
           name: a-plus-results
           path: runs/
           if-no-files-found: warn
+
+      - name: Commit results to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f runs/ 2>/dev/null || true
+          git commit -m "chore: update A+ picks $(date +%F)" 2>/dev/null || echo "nothing to commit"
+          git push

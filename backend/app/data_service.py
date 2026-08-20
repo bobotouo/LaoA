@@ -29,7 +29,13 @@ DEFAULT_RUNS_DIR = Path("/Users/bobo/Desktop/project/ai-stock-cl/runs")
 
 def _runs_dir() -> Path:
     env = os.getenv("A_STOCK_CL_RUNS_DIR", "").strip()
-    return Path(env) if env else DEFAULT_RUNS_DIR
+    if env:
+        return Path(env)
+    # 部署环境（Vercel）可能包含 workflow 提交的 runs/ 文件
+    deploy_runs = Path(__file__).resolve().parents[2] / "runs"
+    if deploy_runs.is_dir():
+        return deploy_runs
+    return DEFAULT_RUNS_DIR
 
 
 def default_last_dashboard_path() -> Path:
