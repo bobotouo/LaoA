@@ -896,10 +896,9 @@ class MarketDataService:
           3. ai-stock-cl runs/ — most recent a_plus_*.json (local dev only)
 
         Returns up to 10 candidates sorted by score desc.
+        实时行情(涨幅/换手)不缓存, 随 dashboard 轮询刷新;
+        标的列表本身不变, 每次直接读文件(很小)开销可忽略。
         """
-        cached = self._get_component_cache("a-plus-picks")
-        if cached is not None:
-            return cached
         records: list[dict[str, Any]] = []
         # 1. local cache mirror
         candidate_paths: list[Path] = [default_a_plus_cache_path()]
@@ -966,7 +965,6 @@ class MarketDataService:
             "source": "策略 A+ · ai-stock-cl",
             "total": len(records),
         }
-        self._set_component_cache("a-plus-picks", result, ttl=300)
         return result
 
     def save_a_plus_picks(self, picks: list[dict[str, Any]]) -> None:
