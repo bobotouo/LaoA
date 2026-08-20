@@ -276,10 +276,10 @@ def screen_history(
     # 流动性过滤: 近5日均成交额 >= min_amount_5d 亿
     result["avg_amount_5d_yi"] = result["avg_amount_5d"] / 1e8
     mask_liq = result["avg_amount_5d_yi"] >= min_amount_5d
-    # 换手率过滤: 仅当数据源提供了换手率时才应用（turnover_rate > 0 表示有真实值）；
-    # free-web 源（腾讯 newfqkline）没有换手率字段，跳过此条件。
+    # 换手率过滤: 仅对数据源提供了真实换手率的股票应用
+    # （腾讯 newfqkline 不提供换手率字段，值为 0；东财数据有真实换手率）
     if (result["turnover_rate"] > 0).any():
-        mask_liq = mask_liq & (result["turnover_rate"] >= min_turnover)
+        mask_liq = mask_liq & ((result["turnover_rate"] >= min_turnover) | (result["turnover_rate"] == 0))
     result = result[mask_liq].copy()
     if result.empty:
         return result
