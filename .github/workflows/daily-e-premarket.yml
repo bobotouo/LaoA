@@ -1,0 +1,67 @@
+name: Strategy E Pre-market
+
+# 盘前预测 · 大盘风险监控（策略E --preopen 模式）
+# 每个交易日盘前跑两波：
+#   第一波 09:20 附近（集合竞价快照 9:15-9:25 定型前）—— UTC 01:15 / 北京 09:15 触发，含延迟
+#   第二波 09:30 复测（竞价定型 + 开盘后复核）        —— UTC 01:25 / 北京 09:25 触发，含延迟
+# GitHub Actions 的 scheduled 任务有 5-30 分钟延迟，故把 cron 设早几分钟。
+on:
+  schedule:
+    - cron: "15 1 * * 1-5"   # 周一至周五 01:15 UTC / 09:15 北京 —— 第一波
+    - cron: "25 1 * * 1-5"   # 周一至周五 01:25 UTC / 09:25 北京 —— 第二波复测
+  workflow_dispatch: {}        # 手动触发（Actions 页面 "Run workflow"）
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-e-premarket
+  cancel-in-progress: false
+
+jobs:
+  forecast:
+    name: Pre-market Risk Forecast
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Run strategy E pre-market forecast and publish
+        run: |
+          mkdir -p runs
+          cd strategy
+          python screen_strategy_e.py \
+            --preopen \
+            --publish-url "https://lao-a.bobotou118.dpdns.org/api/strategy/e" \
+            || true
+        env:
+          TZ: "Asia/Shanghai"
+          # 盘前预测主要依赖腾讯(指数/日K)与新浪(A50/黄金/原油/美元指数)。
+          # 海外 runner 可能连不上新浪，策略E会自动降权跳过，不阻塞。
+          # 集合竞价快照依赖本地 universe 缓存；海外环境退化为隔夜外围+昨日状态。
+          E_NO_SINA_CACHE: "1"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-risk-results
+          path: runs/
+          if-no-files-found: warn
+
+      - name: Commit results to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f runs/ 2>/dev/null || true
+          git commit -m "chore: update market risk $(date +%F)" 2>/dev/null || echo "nothing to commit"
+          git push

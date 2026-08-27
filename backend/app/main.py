@@ -96,6 +96,19 @@ def upload_a_plus_picks(picks: list[APlusPick]) -> dict:
     return {"status": "ok", "count": min(len(picks), 10)}
 
 
+@app.post("/api/strategy/e")
+@app.post("/strategy/e")
+def upload_market_risk(payload: dict) -> dict:
+    """Receive the strategy-E (大盘风险监控 / 盘前预测) assessment.
+
+    The pre-open forecast runs twice in the morning (9:20 and 9:30 Beijing);
+    each run POSTs its full JSON payload here so the dashboard can show the
+    risk score, level and factor breakdown.
+    """
+    service.save_market_risk(payload)
+    return {"status": "ok", "score": payload.get("total_score"), "level": payload.get("level")}
+
+
 # Local `make run` still serves the Vite build. On Vercel, static files come from /public.
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 if FRONTEND_DIST.exists() and not os.getenv("VERCEL"):

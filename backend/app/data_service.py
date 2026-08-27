@@ -56,6 +56,17 @@ def default_a_plus_cache_path() -> Path:
     return Path(__file__).resolve().parents[1] / ".cache" / "a_plus_picks.json"
 
 
+def default_market_risk_path() -> Path:
+    """Local cache copy of the latest strategy-E market-risk assessment.
+
+    Mirrored into /tmp on Vercel via the /api/strategy/e endpoint; the
+    notebook also reads the runs/market_risk files committed by the workflow.
+    """
+    if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        return Path("/tmp/laoa/market_risk.json")
+    return Path(__file__).resolve().parents[1] / ".cache" / "market_risk.json"
+
+
 class MarketDataError(RuntimeError):
     pass
 
@@ -256,6 +267,10 @@ class MarketDataService:
             a_plus_picks = self._fetch_a_plus_picks()
         except Exception:
             a_plus_picks = {"picks": [], "source": "策略 A+ · ai-stock-cl", "updatedAt": "", "total": 0}
+        try:
+            market_risk = self._fetch_market_risk()
+        except Exception:
+            market_risk = {"available": False, "assessments": []}
         now = datetime.now(SHANGHAI_TZ)
 
         is_trading = self._is_trading_time(now)
@@ -287,6 +302,7 @@ class MarketDataService:
             "limitPool": limit_pool,
             "hotLeaders": hot_leaders,
             "aPlusPicks": a_plus_picks,
+            "marketRisk": market_risk,
         }
 
     def _fetch_indices(self) -> list[dict[str, Any]]:
@@ -977,6 +993,114 @@ class MarketDataService:
             pass
         with self._lock:
             self._component_cache.pop("a-plus-picks", None)
+
+    def save_market_risk(self, payload: dict[str, Any]) -> None:
+        """Persist the strategy-E market-risk assessment uploaded via the API."""
+        cache_path = default_market_risk_path()
+        try:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cache_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass
+        with self._lock:
+            self._component_cache.pop("market-risk", None)
+            self._component_cache.pop("market-risk-hist", None)
+
+    def _fetch_market_risk(self) -> dict[str, Any]:
+        """Read the latest strategy-E (大盘风险监控 / 盘前预测) assessment.
+
+        Sources, in order:
+          1. /tmp cache mirror (written by /api/strategy/e on Vercel)
+          2. runs/market_risk/latest.json (committed by the workflow)
+          3. runs/screen_e_latest.json (sync mirror)
+
+        Keeps the two most recent assessments (e.g. the 9:20 pre-open wave and
+        the 9:30 re-check wave) so the dashboard can show a comparison.
+        """
+        payloads: list[dict[str, Any]] = []
+        # 1. cache mirror
+        cache_path = default_market_risk_path()
+        # 2. runs/market_risk/*.json files
+        runs = _runs_dir()
+        risk_dir = runs / "market_risk"
+        candidate_paths: list[Path] = [cache_path, risk_dir / "latest.json", runs / "screen_e_latest.json"]
+        # Accumulate all archived runs (most recent first) for history/comparison
+        archive: list[Path] = []
+        try:
+            if risk_dir.is_dir():
+                archive = sorted(risk_dir.glob("market_risk_*.json"), reverse=True)
+        except OSError:
+            archive = []
+
+        seen: set[str] = set()
+        for path in candidate_paths + archive:
+            if path in seen:
+                continue
+            seen.add(path)
+            try:
+                if path.exists():
+                    raw = json.loads(path.read_text(encoding="utf-8"))
+                    if isinstance(raw, dict) and raw.get("strategy") == "E":
+                        payloads.append(self._normalize_market_risk(raw))
+            except (OSError, json.JSONDecodeError, TypeError):
+                continue
+
+        # Dedup by run_at, keep newest first
+        deduped: dict[str, dict[str, Any]] = {}
+        for p in payloads:
+            key = str(p.get("runAt") or p.get("tradeDate") or "")
+            deduped.setdefault(key, p)
+        latest = list(deduped.values())[:2]
+
+        if not latest:
+            return {"available": False, "assessments": []}
+        return {
+            "available": True,
+            "assessments": latest,
+            "updatedAt": latest[0].get("runAt") or "",
+        }
+
+    @staticmethod
+    def _normalize_market_risk(raw: dict[str, Any]) -> dict[str, Any]:
+        """Normalize the strategy-E payload into a dashboard-friendly shape."""
+        factor_names = {
+            "trend": "趋势破位", "momentum": "短期动量", "drawdown": "回撤深度",
+            "breadth": "市场宽度", "limit": "涨跌停恐慌", "volume": "量能异动",
+            "volatility": "波动/突发", "overnight_us": "隔夜美股", "vix": "恐慌指数VIX",
+            "a50": "富时A50期指", "hk": "港股联动", "fx": "汇率压力", "commodity": "避险商品",
+        }
+        level = str(raw.get("level") or "LOW")
+        factors = raw.get("factors") or {}
+        factor_rows = []
+        for key, f in factors.items():
+            if not isinstance(f, dict):
+                continue
+            factor_rows.append(
+                {
+                    "key": key,
+                    "name": factor_names.get(key, str(key)),
+                    "score": round(float(f.get("score") or 0), 1),
+                    "weight": round(float(f.get("weight") or 0) * 100, 1),
+                    "contribution": round(float(f.get("contribution") or 0), 2),
+                    "detail": str(f.get("detail") or ""),
+                    "skipped": bool(f.get("skipped")),
+                }
+            )
+        factor_rows.sort(key=lambda r: -r["contribution"])
+        return {
+            "strategy": str(raw.get("strategy") or "E"),
+            "mode": str(raw.get("mode") or "live"),
+            "runAt": str(raw.get("run_at") or ""),
+            "tradeDate": str(raw.get("trade_date") or ""),
+            "totalScore": round(float(raw.get("total_score") or 0), 1),
+            "level": level,
+            "levelName": str(raw.get("level_name") or ""),
+            "advice": str(raw.get("advice") or ""),
+            "exitCode": int(raw.get("exit_code") or 0),
+            "confluenceBonus": round(float(raw.get("confluence_bonus") or 0), 1),
+            "coreHot": list(raw.get("core_hot") or []),
+            "factors": factor_rows,
+        }
 
     def _fetch_hot_leaders(self, spots: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """市场热门高标地: 按涨幅排序取连板/高涨幅标的，最多10只。

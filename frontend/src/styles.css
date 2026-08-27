@@ -187,6 +187,35 @@ h1 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 38px); letter-spacing: -0.045e
 
 .limit-panel { margin-top: 13px; }
 .aplus-panel { margin-top: 13px; }
+.risk-panel { margin-top: 13px; }
+.risk-empty { color: #9aa3ad; padding: 20px 4px; font-size: 13px; line-height: 1.6; }
+.risk-hero { display: flex; align-items: center; gap: 22px; padding: 14px 4px 18px; border-bottom: 1px solid #eef1f4; }
+.risk-score { display: flex; align-items: baseline; gap: 4px; }
+.risk-score-label { font-size: 12px; color: #9aa3ad; }
+.risk-score strong { font-size: 46px; line-height: 1; font-weight: 750; }
+.risk-score-max { font-size: 14px; color: #9aa3ad; }
+.risk-low strong { color: #1f9d6b; }
+.risk-elevated strong { color: #d9a520; }
+.risk-high strong { color: #e07a1f; }
+.risk-severe strong { color: #d0343c; }
+.risk-status { display: flex; flex-direction: column; gap: 8px; }
+.risk-badge { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 14px; width: fit-content; }
+.risk-badge.risk-low { background: #e7f7f0; color: #1f9d6b; }
+.risk-badge.risk-elevated { background: #fdf6e3; color: #b98a0f; }
+.risk-badge.risk-high { background: #fdeee2; color: #d0651a; }
+.risk-badge.risk-severe { background: #fdeaea; color: #cf2f38; }
+.risk-advice { color: #52606d; font-size: 13px; }
+.risk-vs-prev { color: #8b95a1; font-size: 12px; }
+.risk-vs-prev small { margin-left: 4px; }
+.risk-factors { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 20px; margin-top: 16px; }
+.risk-factor { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #52606d; }
+.risk-factor.skipped { opacity: 0.45; }
+.risk-factor-name { width: 84px; flex: none; color: #3a4652; }
+.risk-factor-bar { flex: 1; height: 6px; border-radius: 4px; background: #eef1f4; overflow: hidden; }
+.risk-factor-bar i { display: block; height: 100%; border-radius: 4px; background: #7fb8a0; }
+.risk-factor.warn .risk-factor-bar i { background: #e3b04c; }
+.risk-factor.hot .risk-factor-bar i { background: #df6a52; }
+.risk-factor-score { width: 30px; text-align: right; font-weight: 650; color: #3a4652; }
 .picks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-top: 13px; align-items: start; }
 .empty-row { text-align: center; color: #9aa3ad; padding: 24px 12px; font-size: 13px; }
 .aplus-table small { color: #9aa3ad; margin-left: 4px; }
@@ -221,6 +250,8 @@ footer { color: #929ca7; font-size: 11px; text-align: center; padding: 19px 12px
     padding: 12px;
     padding-bottom: calc(12px + env(safe-area-inset-bottom));
   }
+  .risk-hero { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .risk-factors { grid-template-columns: 1fr; }
   .app-header { align-items: flex-start; flex-direction: column; gap: 12px; margin-bottom: 12px; }
   .app-header p { font-size: 13px; }
   .toolbar-actions { width: 100%; }
