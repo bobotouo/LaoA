@@ -420,13 +420,13 @@ function App() {
           <span className="panel-summary">
             {marketRiskAssess
               ? `${marketRiskAssess.tradeDate || "--"} · ${marketRiskAssess.runAt ? marketRiskAssess.runAt.slice(11, 16) : "--"} 更新`
-              : "盘前 9:20 / 9:30 两次评估"}
+              : "盘前 9:25 / 9:36 两次评估"}
           </span>
         </div>
 
         {!marketRiskAssess ? (
           <div className="risk-empty">
-            <p>盘前预测尚未生成。每天 9:20 与 9:30（北京时间）自动评估两次，展示今日大盘风险评分与预警。</p>
+            <p>盘前预测尚未生成。每天 9:25 与 9:36（北京时间）自动评估两次，展示今日大盘风险评分与预警。</p>
           </div>
         ) : (
           <>

@@ -112,7 +112,7 @@ def upload_a_plus_picks(picks: list[APlusPick]) -> dict:
 def upload_market_risk(payload: dict) -> dict:
     """Receive the strategy-E (大盘风险监控 / 盘前预测) assessment.
 
-    The pre-open forecast runs twice in the morning (9:20 and 9:30 Beijing);
+    The pre-open forecast runs twice in the morning (9:25 and 9:36 Beijing);
     each run POSTs its full JSON payload here so the dashboard can show the
     risk score, level and factor breakdown.
     """

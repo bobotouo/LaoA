@@ -745,7 +745,7 @@ def render(res: dict, ctx: dict, preopen: bool = False, fast: bool = False) -> s
         hhmm = now[11:16]
         if fast or not ctx.get("breadth"):
             conf = "🟡置信度中(无竞价快照, 仅隔夜外围+昨日状态)"
-        elif "09:25" <= hhmm <= "09:32":
+        elif "09:25" <= hhmm <= "09:40":
             conf = "🟢置信度高(竞价快照已定型+隔夜外围)"
         else:
             conf = "🟡置信度中(非标准竞价时段)"

@@ -1065,8 +1065,8 @@ class MarketDataService:
           2. runs/market_risk/latest.json (committed by the workflow)
           3. runs/screen_e_latest.json (sync mirror)
 
-        Keeps the two most recent assessments (e.g. the 9:20 pre-open wave and
-        the 9:30 re-check wave) so the dashboard can show a comparison.
+        Keeps the two most recent assessments (e.g. the 9:25 pre-open wave and
+        the 9:36 re-check wave) so the dashboard can show a comparison.
         """
         payloads: list[dict[str, Any]] = []
         # 1. cache mirror

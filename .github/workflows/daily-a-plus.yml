@@ -1,11 +1,9 @@
 name: Daily A+ Picks
 
 # 每个交易日收盘后自动运行 A+ 策略筛选，并把评分前 10 标的推送到仪表盘。
-# 北京时间 16:30 = UTC 08:30（GitHub Actions 的 schedule 使用 UTC）。
+# 定时由 Cloudflare Cron 准点触发（北京 16:50），见 cloudflare/；此处只保留手动入口。
 on:
-  schedule:
-    - cron: "30 8 * * 1-5"   # 周一至周五 08:30 UTC / 16:30 北京
-  workflow_dispatch: {}        # 支持手动触发（Actions 页面 "Run workflow"）
+  workflow_dispatch: {}        # Cloudflare Cron / Actions 页面 "Run workflow"
 
 permissions:
   contents: write

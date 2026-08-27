@@ -5,21 +5,29 @@
 - 沪深成交额、全天预测、5/20/60 日均额
 - 上涨/下跌家数与涨跌幅分布
 - 涨停/跌停数量、市场热门高标地（连板排序）
-- 策略 A+ 筛选结果（每个交易日收盘后由 GitHub Actions 自动更新）
+- 策略 A+ 筛选结果（每个交易日收盘后自动更新）
+- 盘前预测 · 大盘风险监控（策略 E，每个交易日 09:25 / 09:36 两次）
 
 ## 技术栈
 
 - 后端：FastAPI、Requests
 - 前端：React、Vite、ECharts
 - 数据：东方财富公开行情（板块/分时/涨停池）+ FinShare/通达信（全市场快照与指数兜底）
-- 自动化：GitHub Actions 每日 16:30（北京时间）运行 A+ 策略并把前 10 只推送到仪表盘
+- 自动化：Cloudflare Cron 准点触发 → GitHub Actions 跑筛选脚本
 
-## 每日 A+ 自动化
+## 每日自动化
 
-`.github/workflows/daily-a-plus.yml` 在每个交易日 16:30 自动运行 A+ 筛选器
-（`strategy/screen_strategy_a_plus.py`，数据源为新浪/腾讯/东财免费接口），
-并把评分前 10 的标的 POST 到 `/api/strategy/a-plus`。手动触发可在 GitHub
-仓库 Actions 页面点 "Run workflow"。
+定时由 `cloudflare/` Worker Cron 触发（不再依赖 GitHub 自带 schedule）：
+
+| 任务 | 北京时间 | Workflow |
+|---|---|---|
+| 策略 E 第一波 | 09:25 | `daily-e-premarket.yml` |
+| 策略 E 复测 | 09:36 | `daily-e-premarket.yml` |
+| 策略 A+ | 16:50 | `daily-a-plus.yml` |
+
+A+ 筛选器（`strategy/screen_strategy_a_plus.py`）跑完后把评分前 10 POST 到
+`/api/strategy/a-plus`。部署与试跑见 `cloudflare/README.md`。也可在 GitHub
+Actions 页面手动 "Run workflow"。
 
 ## 板块数据说明
 
