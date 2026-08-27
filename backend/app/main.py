@@ -84,6 +84,17 @@ def stock_list() -> list[dict]:
     return service.fetch_stock_list_snapshot()
 
 
+@app.get("/api/market/e-data")
+def e_strategy_data() -> dict:
+    """A-share basis data for strategy-E (盘前预测) running on overseas runners.
+
+    Returns market breadth (up/down/limit_up/limit_down) and the SSE index
+    snapshot, both computed from East Money on this side, so GitHub Actions
+    never has to reach Chinese endpoints directly.
+    """
+    return service.fetch_e_strategy_basis()
+
+
 @app.post("/api/strategy/a-plus")
 @app.post("/strategy/a-plus")
 def upload_a_plus_picks(picks: list[APlusPick]) -> dict:

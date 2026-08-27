@@ -411,6 +411,64 @@ function App() {
         ))}
       </section>
 
+      <section className="panel risk-panel">
+        <div className="panel-heading">
+          <div>
+            <span className="panel-kicker">STRATEGY E · PRE-MARKET</span>
+            <h2>盘前预测 · 大盘风险监控</h2>
+          </div>
+          <span className="panel-summary">
+            {marketRiskAssess
+              ? `${marketRiskAssess.tradeDate || "--"} · ${marketRiskAssess.runAt ? marketRiskAssess.runAt.slice(11, 16) : "--"} 更新`
+              : "盘前 9:20 / 9:30 两次评估"}
+          </span>
+        </div>
+
+        {!marketRiskAssess ? (
+          <div className="risk-empty">
+            <p>盘前预测尚未生成。每天 9:20 与 9:30（北京时间）自动评估两次，展示今日大盘风险评分与预警。</p>
+          </div>
+        ) : (
+          <>
+            <div className="risk-hero">
+              <div className={`risk-score ${riskMeta.cls}`}>
+                <span className="risk-score-label">风险分</span>
+                <strong>{marketRiskAssess.totalScore}</strong>
+                <span className="risk-score-max">/ 100</span>
+              </div>
+              <div className="risk-status">
+                {prevAssess ? (
+                  <span className="risk-vs-prev" title={prevAssess.runAt}>
+                    {prevAssess.totalScore} → {marketRiskAssess.totalScore}
+                    <small>（前次 {prevAssess.runAt.slice(11, 16)}）</small>
+                  </span>
+                ) : null}
+                <span className={`risk-badge ${riskMeta.cls}`}>{marketRiskAssess.levelName}</span>
+                <span className="risk-advice">{marketRiskAssess.advice}</span>
+              </div>
+            </div>
+
+            {marketRiskAssess.factors?.length ? (
+              <div className="risk-factors">
+                {marketRiskAssess.factors.map((factor) => (
+                  <div
+                    key={factor.key}
+                    className={`risk-factor ${factor.skipped ? "skipped" : ""} ${factor.score >= 60 ? "hot" : factor.score >= 35 ? "warn" : ""}`}
+                    title={factor.detail}
+                  >
+                    <span className="risk-factor-name">{factor.name}</span>
+                    <span className="risk-factor-bar">
+                      <i style={{ width: `${Math.min(100, factor.score)}%` }} />
+                    </span>
+                    <span className="risk-factor-score">{factor.skipped ? "—" : factor.score}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </>
+        )}
+      </section>
+
       <main className="dashboard-grid">
         <section className="panel dominant-panel">
           <div className="panel-heading">
@@ -566,64 +624,6 @@ function App() {
               </tbody>
             </table>
           </div>
-        </section>
-
-        <section className="panel risk-panel">
-          <div className="panel-heading">
-            <div>
-              <span className="panel-kicker">STRATEGY E · PRE-MARKET</span>
-              <h2>盘前预测 · 大盘风险监控</h2>
-            </div>
-            <span className="panel-summary">
-              {marketRiskAssess
-                ? `${marketRiskAssess.tradeDate || "--"} · ${marketRiskAssess.runAt ? marketRiskAssess.runAt.slice(11, 16) : "--"} 更新`
-                : "盘前 9:20 / 9:30 两次评估"}
-            </span>
-          </div>
-
-          {!marketRiskAssess ? (
-            <div className="risk-empty">
-              <p>盘前预测尚未生成。每天 9:20 与 9:30（北京时间）自动评估两次，展示今日大盘风险评分与预警。</p>
-            </div>
-          ) : (
-            <>
-              <div className="risk-hero">
-                <div className={`risk-score ${riskMeta.cls}`}>
-                  <span className="risk-score-label">风险分</span>
-                  <strong>{marketRiskAssess.totalScore}</strong>
-                  <span className="risk-score-max">/ 100</span>
-                </div>
-                <div className="risk-status">
-                  {prevAssess ? (
-                    <span className="risk-vs-prev" title={prevAssess.runAt}>
-                      {prevAssess.totalScore} → {marketRiskAssess.totalScore}
-                      <small>（前次 {prevAssess.runAt.slice(11, 16)}）</small>
-                    </span>
-                  ) : null}
-                  <span className={`risk-badge ${riskMeta.cls}`}>{marketRiskAssess.levelName}</span>
-                  <span className="risk-advice">{marketRiskAssess.advice}</span>
-                </div>
-              </div>
-
-              {marketRiskAssess.factors?.length ? (
-                <div className="risk-factors">
-                  {marketRiskAssess.factors.map((factor) => (
-                    <div
-                      key={factor.key}
-                      className={`risk-factor ${factor.skipped ? "skipped" : ""} ${factor.score >= 60 ? "hot" : factor.score >= 35 ? "warn" : ""}`}
-                      title={factor.detail}
-                    >
-                      <span className="risk-factor-name">{factor.name}</span>
-                      <span className="risk-factor-bar">
-                        <i style={{ width: `${Math.min(100, factor.score)}%` }} />
-                      </span>
-                      <span className="risk-factor-score">{factor.skipped ? "—" : factor.score}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </>
-          )}
         </section>
       </div>
 

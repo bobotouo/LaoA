@@ -588,6 +588,57 @@ class MarketDataService:
         result.sort(key=lambda item: item["full_code"])
         return result
 
+    def fetch_e_strategy_basis(self) -> dict[str, Any]:
+        """Provide strategy-E (盘前预测) with A-share data it can't reach overseas.
+
+        GitHub Actions runners can't reach Sina/Tencent/EastMoney directly, but
+        this deployed API fetches from East Money fine.  Strategy E's pre-open
+        forecast needs two A-share-only inputs:
+          - market breadth (up/down/limit_up/limit_down)  → 14% + 6% weight
+          - the SSE index snapshot → trend/momentum/volume factors
+        Both are already computed by the live dashboard, so we just re-expose
+        them in the exact shape `screen_strategy_e.py` expects.
+        """
+        spots = self._fetch_spot_market()
+        overview_counts = {}
+        try:
+            overview_counts = self._fetch_overview_counts()
+        except Exception:
+            overview_counts = {}
+        breadth, _turnover = self._summarize_spots(spots, overview_counts)
+        up = int(breadth.get("up") or 0)
+        down = int(breadth.get("down") or 0)
+        flat = int(breadth.get("flat") or 0)
+        valid = up + down + flat
+        result: dict[str, Any] = {
+            "breadth": {
+                "valid": valid,
+                "up": up,
+                "down": down,
+                "flat": flat,
+                "up_pct": round(up / valid * 100, 2) if valid else 0.0,
+                "down_pct": round(down / valid * 100, 2) if valid else 0.0,
+                "limit_up": int(breadth.get("limitUp") or 0),
+                "limit_down": int(breadth.get("limitDown") or 0),
+            },
+            "sse": None,
+            "trade_date": datetime.now(SHANGHAI_TZ).strftime("%Y-%m-%d"),
+        }
+        try:
+            indices = self._fetch_indices()
+            for idx in indices:
+                if idx.get("code") == "000001":
+                    result["sse"] = {
+                        "price": self._number(idx.get("price")),
+                        "change_pct": self._number(idx.get("changePct")),
+                        "previous_close": self._number(idx.get("previousClose")),
+                        "name": str(idx.get("name") or "上证指数"),
+                    }
+                    break
+        except Exception:
+            result["sse"] = None
+        return result
+
     def _fetch_spot_market(self) -> list[dict[str, Any]]:
         cached = self._get_component_cache("market-snapshots")
         if cached is not None:

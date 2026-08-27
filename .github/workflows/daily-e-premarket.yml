@@ -35,6 +35,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          # 全球外围数据(A50/黄金/原油/美元指数/VIX/美股/港股)海外兜底用 yfinance
+          pip install yfinance
 
       - name: Run strategy E pre-market forecast and publish
         run: |
@@ -43,12 +45,14 @@ jobs:
           python screen_strategy_e.py \
             --preopen \
             --publish-url "https://lao-a.bobotou118.dpdns.org/api/strategy/e" \
+            --data-url "https://lao-a.bobotou118.dpdns.org/api/market/e-data" \
             || true
         env:
           TZ: "Asia/Shanghai"
-          # 盘前预测主要依赖腾讯(指数/日K)与新浪(A50/黄金/原油/美元指数)。
-          # 海外 runner 可能连不上新浪，策略E会自动降权跳过，不阻塞。
-          # 集合竞价快照依赖本地 universe 缓存；海外环境退化为隔夜外围+昨日状态。
+          # 海外 runner 直连不到新浪/腾讯/东财。解决方案：
+          #   1. 市场宽度/涨跌停/上证快照 → 经已部署 API(/api/market/e-data)中转
+          #   2. 全球外围(A50/黄金/原油/美元指数/VIX/美股/港股) → yfinance 兜底
+          #   3. 新浪本地缓存(集合竞价快照)不可用，但已由远程宽度替代
           E_NO_SINA_CACHE: "1"
 
       - name: Upload results

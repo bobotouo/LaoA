@@ -239,6 +239,54 @@ def em_quote_ratio(secid: str) -> dict | None:
     return None
 
 
+# ─────────────────── yfinance 兜底 (海外 runner) ───────────────────
+# 新浪 hq.sinajs.cn 对海外 IP 不可达。全球外围数据(A50/黄金/原油/美元指数/VIX/
+# 美股/港股)在海外 runner 上用 yfinance(Yahoo, 美国服务) 兜底。本地仍优先新浪。
+YF_SYMBOLS = {
+    "a50": "2823.HK",          # 南方A50 ETF(近似新加坡富时A50期指)
+    "gold": "GC=F",            # COMEX 黄金期货
+    "oil": "BZ=F",             # 布伦特原油
+    "udi": "DX-Y.NYB",         # 美元指数
+    "vix": "^VIX",
+    "usDJI": "^DJI",
+    "usIXIC": "^IXIC",
+    "usINX": "^GSPC",
+    "hkHSI": "^HSI",
+    "hkHSTECH": "^HSTECH",
+    "usdcnh": "CNH=X",
+}
+
+
+def _yf_history_quote(symbol: str) -> dict | None:
+    """用 yfinance 取最近两根日K, 返回 {price, prev, date} 供因子计分用."""
+    import yfinance as yf  # 延迟导入, 避免本地未安装时报错
+    try:
+        data = yf.Ticker(symbol).history(period="5d", interval="1d")
+        if data is None or len(data) < 2:
+            return None
+        last = data.iloc[-1]
+        prev = data.iloc[-2]
+        return {
+            "symbol": symbol,
+            "price": float(last["Close"]),
+            "prev": float(prev["Close"]),
+            "date": last.name.strftime("%Y-%m-%d"),
+        }
+    except Exception:
+        return None
+
+
+def _yf_fallback() -> dict[str, dict | None]:
+    """批量用 yfinance 拉全球外围数据(兜底), 返回与 sina_global 兼容的结构.
+
+    a50/gold/oil/udi 需要 {price, prev, date}, 其余(quotes/vix)单独处理。
+    """
+    out: dict[str, dict | None] = {}
+    for key in ("a50", "gold", "oil", "udi", "vix"):
+        out[key] = _yf_history_quote(YF_SYMBOLS[key])
+    return out
+
+
 # ─────────────────────────── universe / breadth ───────────────────────────
 def load_universe() -> list[tuple[str, str, str]]:
     stocks = []
@@ -580,7 +628,25 @@ def evaluate(data: dict, preopen: bool = False) -> dict:
 
 
 # ─────────────────────────── collect ───────────────────────────
-def collect(fast: bool = False, preopen: bool = False) -> dict:
+def fetch_remote_basis(data_url: str) -> dict | None:
+    """从已部署 API 拉取 A 股市场宽度/涨跌停/上证快照(海外 runner 直连不到中国数据源)。
+
+    接口(/api/market/e-data)返回 {breadth:{valid,up,down,flat,up_pct,down_pct,
+    limit_up,limit_down}, sse:{price,change_pct,previous_close,name}, trade_date}。
+    """
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(data_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            if attempt == 2:
+                return None
+            time.sleep(1.0)
+    return None
+
+
+def collect(fast: bool = False, preopen: bool = False, data_url: str = "") -> dict:
     idx_codes = ["sh000001", "sz399001", "sz399006", "sh000688"]
     ext_codes = ["usDJI", "usIXIC", "usINX", "hkHSI", "hkHSTECH"]
     mode_txt = "盘前预测" if preopen else "实时评估"
@@ -591,6 +657,16 @@ def collect(fast: bool = False, preopen: bool = False) -> dict:
                      "hkHSI": "HSI", "hkHSTECH": "HSTECH"}.items():
         if req not in quotes and alt in quotes:
             quotes[req] = quotes[alt]
+
+    # 腾讯实时行情海外不可达时, 用 yfinance 兜底美股/港股涨跌幅
+    if not quotes:
+        print("      腾讯实时行情不可达, 用 yfinance 兜底外围指数", file=sys.stderr)
+        for key in ("usDJI", "usIXIC", "usINX", "hkHSI", "hkHSTECH"):
+            q = _yf_history_quote(YF_SYMBOLS.get(key, ""))
+            if q and q.get("prev"):
+                prev, px = q["prev"], q["price"]
+                quotes[key] = {"name": key, "code": key, "price": px,
+                               "prev": prev, "chg_pct": (px / prev - 1) * 100}
     kline = {c: index_kline(c) for c in ("sh000001",)}
     print(f"      K线{len(kline['sh000001'])}根, 行情{len(quotes)}个", file=sys.stderr)
 
@@ -602,7 +678,13 @@ def collect(fast: bool = False, preopen: bool = False) -> dict:
     missing = [n for n, v in [("a50", a50), ("gold", gold), ("oil", oil),
                               ("udi", udi)] if not v]
     if missing:
-        print(f"      ⚠ 外围源缺失(自动降权): {','.join(missing)}", file=sys.stderr)
+        # 新浪不可达 → yfinance 兜底
+        print(f"      新浪外围源缺失({','.join(missing)}), 用 yfinance 兜底", file=sys.stderr)
+        yfd = _yf_fallback()
+        a50 = a50 or yfd.get("a50")
+        gold = gold or yfd.get("gold")
+        oil = oil or yfd.get("oil")
+        udi = udi or yfd.get("udi")
 
     vix_txt = http_get("http://qt.gtimg.cn/q=usVIX")
     vix = None
@@ -613,16 +695,36 @@ def collect(fast: bool = False, preopen: bool = False) -> dict:
             vix = {"price": float(f[3]), "date": ts[:10]}
         except Exception:
             vix = None
+    if vix is None:
+        yv = _yf_history_quote(YF_SYMBOLS.get("vix", ""))
+        if yv:
+            vix = {"price": yv["price"], "date": yv["date"]}
 
     usdcnh = em_quote_ratio("133.USDCNH")
+    if usdcnh is None:
+        yc = _yf_history_quote(YF_SYMBOLS.get("usdcnh", ""))
+        if yc and yc.get("prev") and yc.get("prev"):
+            prev, px = yc["prev"], yc["price"]
+            usdcnh = {"price_raw": px * 10000, "prev_raw": prev * 10000,
+                      "chg_pct": (px / prev - 1) * 100}
 
     breadth = None
-    # 盘前模式必须扫竞价快照(9:15-9:25腾讯返回集合竞价指示价; 9:25后为确定开盘价)
-    if not fast:
+    # 优先从远程 API 拉取市场宽度/涨跌停(海外 runner); 本地则扫集合竞价快照
+    if data_url:
+        basis = fetch_remote_basis(data_url)
+        if basis and (basis.get("breadth") or {}).get("valid"):
+            b = basis["breadth"]
+            breadth = {"valid": int(b.get("valid") or 0), "up": int(b.get("up") or 0),
+                       "down": int(b.get("down") or 0), "flat": int(b.get("flat") or 0),
+                       "up_pct": float(b.get("up_pct") or 0), "down_pct": float(b.get("down_pct") or 0),
+                       "limit_up": int(b.get("limit_up") or 0), "limit_down": int(b.get("limit_down") or 0)}
+            print(f"[3/4] 远程市场宽度: 涨{breadth['up']}/跌{breadth['down']}/平{breadth['flat']} "
+                  f"涨停{breadth['limit_up']}/跌停{breadth['limit_down']}", file=sys.stderr)
+    if breadth is None and not fast:
         label = "集合竞价快照" if preopen else "全市场宽度"
         print(f"[3/4] {label}扫描...", file=sys.stderr)
         breadth = market_breadth(load_universe())
-    else:
+    elif breadth is None:
         print("[3/4] 跳过宽度扫描(--fast)", file=sys.stderr)
 
     print("[4/4] 计算因子...", file=sys.stderr)
@@ -749,7 +851,7 @@ def publish(url: str, payload: dict) -> None:
 
 
 def run_once(args) -> int:
-    data = collect(fast=args.fast, preopen=args.preopen)
+    data = collect(fast=args.fast, preopen=args.preopen, data_url=args.data_url or "")
     res = evaluate(data, preopen=args.preopen)
     saved, prev = save_result(res, data)
     print(render(res, data, preopen=args.preopen, fast=args.fast))
@@ -782,6 +884,9 @@ def main() -> int:
     ap.add_argument("--watch", type=int, default=0, metavar="MIN",
                     help="循环模式: 每MIN分钟重新评估")
     ap.add_argument("--publish-url", default=None, help="结果POST到该URL")
+    ap.add_argument("--data-url", default=None,
+                    help="远程A股基础数据接口(市场宽度/涨跌停/上证快照)。"
+                         "海外 runner 无法直连新浪/腾讯, 用此中转(如 /api/market/e-data)")
     args = ap.parse_args()
 
     if args.watch > 0:
