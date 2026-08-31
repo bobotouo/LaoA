@@ -1,9 +1,9 @@
 {
   "strategy": "E",
   "mode": "preopen_forecast",
-  "run_at": "2026-08-31 09:25:36",
+  "run_at": "2026-08-31 09:29:06",
   "trade_date": "2026-08-31",
-  "total_score": 33.5,
+  "total_score": 33.0,
   "level": "ELEVATED",
   "level_name": "🟡 ELEVATED 警惕",
   "advice": "大盘转弱, 新开仓降仓(单票≤25%), 收紧止损至-2%, 高位连板股回避。",
@@ -79,10 +79,10 @@
       "skipped": true
     },
     "a50": {
-      "score": 54.8,
+      "score": 50.2,
       "weight": 0.1,
-      "contribution": 5.48,
-      "detail": "A50期指14567 -0.97%(领先指标)",
+      "contribution": 5.02,
+      "detail": "A50期指14576 -0.90%(领先指标)",
       "skipped": false
     },
     "hk": {
@@ -96,14 +96,14 @@
       "score": 0.0,
       "weight": 0.07,
       "contribution": 0.0,
-      "detail": "USDCNH6.7287(-0.04%), 美元指数99.6(-0.06%)",
+      "detail": "USDCNH6.7286(-0.04%), 美元指数99.6(-0.06%)",
       "skipped": false
     },
     "commodity": {
       "score": 0.0,
       "weight": 0.03,
       "contribution": 0.0,
-      "detail": "伦敦金-0.80% / 布油+2.06%",
+      "detail": "伦敦金-0.86% / 布油+2.12%",
       "skipped": false
     }
   },
@@ -132,7 +132,7 @@
     },
     "a50": {
       "code": "hf_CHA50CFD",
-      "price": 14566.72,
+      "price": 14576.3,
       "date": "2026-08-31",
       "prev": 14709.0,
       "high": 14738.0,
@@ -140,9 +140,9 @@
       "open": 14706.0
     },
     "usdcnh": {
-      "price_raw": 67287,
+      "price_raw": 67286,
       "prev_raw": 67316,
-      "chg_pct": -0.0430803969338589
+      "chg_pct": -0.04456592786261648
     },
     "breadth": {
       "valid": 5505,
