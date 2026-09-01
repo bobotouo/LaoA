@@ -75,4 +75,16 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -f runs/ 2>/dev/null || true
           git commit -m "chore: update A+ picks $(date +%F)" 2>/dev/null || echo "nothing to commit"
-          git push
+          pushed=0
+          for i in 1 2 3; do
+            if git pull --rebase --autostash origin main && git push origin main; then
+              pushed=1
+              break
+            fi
+            echo "push retry $i"
+            sleep 5
+          done
+          if [ "$pushed" != 1 ]; then
+            echo "git push failed after 3 retries"
+            exit 1
+          fi

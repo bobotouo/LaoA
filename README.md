@@ -26,8 +26,8 @@
 | 策略 A+ | 16:50 | `daily-a-plus.yml` |
 
 A+ 筛选器（`strategy/screen_strategy_a_plus.py`）跑完后把评分前 10 POST 到
-`/api/strategy/a-plus`。部署与试跑见 `cloudflare/README.md`。也可在 GitHub
-Actions 页面手动 "Run workflow"。
+`/api/strategy/a-plus`。部署与 **cron-job.org 定时配置**见 `cloudflare/README.md`。
+也可在 GitHub Actions 页面手动 "Run workflow"。
 
 ## 板块数据说明
 
