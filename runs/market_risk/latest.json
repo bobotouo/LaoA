@@ -1,9 +1,9 @@
 {
   "strategy": "E",
   "mode": "preopen_forecast",
-  "run_at": "2026-09-10 09:25:39",
+  "run_at": "2026-09-10 09:37:39",
   "trade_date": "2026-09-10",
-  "total_score": 22.4,
+  "total_score": 25.0,
   "level": "LOW",
   "level_name": "🟢 LOW 正常",
   "advice": "大盘环境正常, 可按既定策略(A/A+/B/C/D)正常筛选执行。",
@@ -39,14 +39,14 @@
       "score": 100.0,
       "weight": 0.14,
       "contribution": 14.0,
-      "detail": "上涨家数占比17%(915/5478, 涨停10/跌停1)",
+      "detail": "上涨家数占比10%(450/4431, 涨停14/跌停3)",
       "skipped": false
     },
     "limit": {
       "score": 0.0,
       "weight": 0.06,
       "contribution": 0.0,
-      "detail": "跌停1只 vs 涨停10只",
+      "detail": "跌停3只 vs 涨停14只",
       "skipped": false
     },
     "volume": {
@@ -78,31 +78,31 @@
       "skipped": true
     },
     "a50": {
-      "score": 32.3,
+      "score": 48.7,
       "weight": 0.1,
-      "contribution": 3.23,
-      "detail": "A50期指14569 -0.65%(领先指标)",
+      "contribution": 4.87,
+      "detail": "A50期指14536 -0.88%(领先指标)",
       "skipped": false
     },
     "hk": {
-      "score": 0.0,
+      "score": 15.0,
       "weight": 0.05,
-      "contribution": 0.0,
-      "detail": "恒指+0.0% 恒科+0.0%",
+      "contribution": 0.75,
+      "detail": "恒指-1.1% 恒科-1.4%",
       "skipped": false
     },
     "fx": {
       "score": 0.0,
       "weight": 0.07,
       "contribution": 0.0,
-      "detail": "USDCNH6.7069(+0.01%), 美元指数98.8(+0.00%)",
+      "detail": "USDCNH6.7067(+0.00%), 美元指数98.8(+0.00%)",
       "skipped": false
     },
     "commodity": {
       "score": 0.0,
       "weight": 0.03,
       "contribution": 0.0,
-      "detail": "伦敦金-0.06% / 布油+0.39%",
+      "detail": "伦敦金-0.17% / 布油+0.42%",
       "skipped": false
     }
   },
@@ -110,13 +110,13 @@
     "sse": {
       "name": "上证指数",
       "code": "000001",
-      "price": 3939.09,
+      "price": 3929.3,
       "prev": 3951.51,
       "open": 3939.09,
-      "chg_pct": -0.31,
-      "high": 3939.09,
-      "low": 3939.09,
-      "amount_wan": 646549.0
+      "chg_pct": -0.56,
+      "high": 3941.16,
+      "low": 3927.35,
+      "amount_wan": 12517080.0
     },
     "nasdaq": {
       "name": "纳斯达克",
@@ -131,27 +131,27 @@
     },
     "a50": {
       "code": "hf_CHA50CFD",
-      "price": 14569.44,
+      "price": 14535.68,
       "date": "2026-09-10",
       "prev": 14665.0,
       "high": 14671.0,
-      "low": 14563.0,
+      "low": 14509.0,
       "open": 14668.0
     },
     "usdcnh": {
-      "price_raw": 67069,
+      "price_raw": 67067,
       "prev_raw": 67065,
-      "chg_pct": 0.005964362931476508
+      "chg_pct": 0.002982181465749356
     },
     "breadth": {
-      "valid": 5478,
-      "up": 915,
-      "down": 3967,
-      "flat": 596,
-      "up_pct": 16.7,
-      "down_pct": 72.42,
-      "limit_up": 10,
-      "limit_down": 1
+      "valid": 4431,
+      "up": 450,
+      "down": 3931,
+      "flat": 50,
+      "up_pct": 10.16,
+      "down_pct": 88.72,
+      "limit_up": 14,
+      "limit_down": 3
     }
   }
 }
