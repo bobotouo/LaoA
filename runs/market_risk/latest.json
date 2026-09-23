@@ -1,7 +1,7 @@
 {
   "strategy": "E",
   "mode": "preopen_forecast",
-  "run_at": "2026-09-23 09:26:05",
+  "run_at": "2026-09-23 09:38:16",
   "trade_date": "2026-09-23",
   "total_score": 1.8,
   "level": "LOW",
@@ -79,28 +79,28 @@
       "score": 0.0,
       "weight": 0.1,
       "contribution": 0.0,
-      "detail": "A50期指14668 +0.10%(领先指标)",
+      "detail": "A50期指14628 -0.18%(领先指标)",
       "skipped": false
     },
     "hk": {
       "score": 0.0,
       "weight": 0.05,
       "contribution": 0.0,
-      "detail": "恒指+0.0% 恒科+0.0%",
+      "detail": "恒指-0.1% 恒科+0.0%",
       "skipped": false
     },
     "fx": {
       "score": 0.0,
       "weight": 0.07,
       "contribution": 0.0,
-      "detail": "USDCNH6.6989(+0.01%), 美元指数100.6(+0.00%)",
+      "detail": "USDCNH6.6990(+0.01%), 美元指数100.6(+0.00%)",
       "skipped": false
     },
     "commodity": {
       "score": 0.0,
       "weight": 0.03,
       "contribution": 0.0,
-      "detail": "伦敦金+0.17% / 布油-0.07%",
+      "detail": "伦敦金+0.13% / 布油-0.18%",
       "skipped": false
     }
   },
@@ -108,13 +108,13 @@
     "sse": {
       "name": "上证指数",
       "code": "000001",
-      "price": 3951.37,
+      "price": 3944.36,
       "prev": 3952.13,
       "open": 3951.37,
-      "chg_pct": -0.02,
-      "high": 3951.37,
-      "low": 3951.37,
-      "amount_wan": 625547.0
+      "chg_pct": -0.2,
+      "high": 3951.52,
+      "low": 3941.39,
+      "amount_wan": 11920610.0
     },
     "nasdaq": {
       "name": "纳斯达克",
@@ -129,17 +129,17 @@
     },
     "a50": {
       "code": "hf_CHA50CFD",
-      "price": 14668.2,
+      "price": 14627.83,
       "date": "2026-09-23",
       "prev": 14654.0,
       "high": 14714.0,
-      "low": 14659.0,
+      "low": 14616.0,
       "open": 14659.0
     },
     "usdcnh": {
-      "price_raw": 66989,
+      "price_raw": 66990,
       "prev_raw": 66984,
-      "chg_pct": 0.007464469126960971
+      "chg_pct": 0.008957362952344283
     },
     "breadth": null
   }
