@@ -1,17 +1,18 @@
 {
   "strategy": "E",
   "mode": "preopen_forecast",
-  "run_at": "2026-09-25 09:37:57",
-  "trade_date": "2026-09-25",
-  "total_score": 14.7,
+  "run_at": "2026-09-28 09:25:52",
+  "trade_date": "2026-09-28",
+  "total_score": 25.4,
   "level": "LOW",
   "level_name": "🟢 LOW 正常",
   "advice": "大盘环境正常, 可按既定策略(A/A+/B/C/D)正常筛选执行。",
   "exit_code": 0,
-  "weight_normalization": 1.163,
-  "confluence_bonus": 0.0,
+  "weight_normalization": 1.087,
+  "confluence_bonus": 5.0,
   "core_hot": [
-    "trend"
+    "trend",
+    "breadth"
   ],
   "factors": {
     "trend": {
@@ -36,18 +37,18 @@
       "skipped": false
     },
     "breadth": {
-      "score": 0.0,
+      "score": 51.6,
       "weight": 0.14,
-      "contribution": 0.0,
-      "detail": "未扫描(--fast)",
+      "contribution": 7.23,
+      "detail": "上涨家数占比38%(2083/5473, 涨停8/跌停2)",
       "skipped": false
     },
     "limit": {
       "score": 0.0,
-      "weight": 0.0,
+      "weight": 0.06,
       "contribution": 0.0,
-      "detail": "未扫描",
-      "skipped": true
+      "detail": "跌停2只 vs 涨停8只",
+      "skipped": false
     },
     "volume": {
       "score": 0.0,
@@ -64,10 +65,10 @@
       "skipped": false
     },
     "overnight_us": {
-      "score": 2.6,
+      "score": 0.0,
       "weight": 0.12,
-      "contribution": 0.31,
-      "detail": "纳指+0.0% 道指-0.3% 标普-0.0%",
+      "contribution": 0.0,
+      "detail": "纳指+0.5% 道指+0.9% 标普+0.5%",
       "skipped": false
     },
     "vix": {
@@ -78,31 +79,31 @@
       "skipped": true
     },
     "a50": {
-      "score": 0.0,
+      "score": 0.5,
       "weight": 0.1,
-      "contribution": 0.0,
-      "detail": "A50期指14211 +0.61%(领先指标)",
+      "contribution": 0.05,
+      "detail": "A50期指14152 -0.21%(领先指标)",
       "skipped": false
     },
     "hk": {
-      "score": 5.8,
+      "score": 0.0,
       "weight": 0.05,
-      "contribution": 0.29,
-      "detail": "恒指-1.0% 恒科-1.0%",
+      "contribution": 0.0,
+      "detail": "恒指+0.0% 恒科+0.0%",
       "skipped": false
     },
     "fx": {
       "score": 0.0,
       "weight": 0.07,
       "contribution": 0.0,
-      "detail": "USDCNH6.7148(-0.02%), 美元指数101.3(+0.00%)",
+      "detail": "USDCNH6.7164(-0.10%), 美元指数101.1(+0.00%)",
       "skipped": false
     },
     "commodity": {
-      "score": 20.0,
+      "score": 0.0,
       "weight": 0.03,
-      "contribution": 0.6,
-      "detail": "伦敦金+0.75% / 布油-1.20%",
+      "contribution": 0.0,
+      "detail": "伦敦金-1.59% / 布油+1.09%",
       "skipped": false
     }
   },
@@ -110,39 +111,48 @@
     "sse": {
       "name": "上证指数",
       "code": "000001",
-      "price": 3888.37,
-      "prev": 3936.52,
-      "open": 3925.32,
-      "chg_pct": -1.22,
-      "high": 3930.5,
-      "low": 3888.37,
-      "amount_wan": 78361300.0
+      "price": 3878.41,
+      "prev": 3888.37,
+      "open": 3878.41,
+      "chg_pct": -0.26,
+      "high": 3878.41,
+      "low": 3878.41,
+      "amount_wan": 617267.0
     },
     "nasdaq": {
       "name": "纳斯达克",
       "code": ".IXIC",
-      "price": 26939.37,
-      "prev": 26936.04,
-      "open": 26734.51,
-      "chg_pct": 0.01,
-      "high": 26971.04,
-      "low": 26706.14,
-      "amount_wan": 191590757139210.0
+      "price": 27068.72,
+      "prev": 26939.37,
+      "open": 26970.95,
+      "chg_pct": 0.48,
+      "high": 27122.76,
+      "low": 26876.27,
+      "amount_wan": 170532176354544.0
     },
     "a50": {
       "code": "hf_CHA50CFD",
-      "price": 14210.7,
-      "date": "2026-09-25",
-      "prev": 14124.0,
-      "high": 14283.0,
-      "low": 14181.0,
-      "open": 14223.0
+      "price": 14151.66,
+      "date": "2026-09-28",
+      "prev": 14181.0,
+      "high": 14210.0,
+      "low": 14128.0,
+      "open": 14181.0
     },
     "usdcnh": {
-      "price_raw": 67148,
-      "prev_raw": 67161,
-      "chg_pct": -0.019356471761888816
+      "price_raw": 67164,
+      "prev_raw": 67231,
+      "chg_pct": -0.09965640850203572
     },
-    "breadth": null
+    "breadth": {
+      "valid": 5473,
+      "up": 2083,
+      "down": 2450,
+      "flat": 940,
+      "up_pct": 38.06,
+      "down_pct": 44.77,
+      "limit_up": 8,
+      "limit_down": 2
+    }
   }
 }
