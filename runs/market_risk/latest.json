@@ -1,14 +1,14 @@
 {
   "strategy": "E",
   "mode": "preopen_forecast",
-  "run_at": "2026-10-01 09:25:58",
+  "run_at": "2026-10-01 09:37:40",
   "trade_date": "2026-10-01",
-  "total_score": 21.5,
+  "total_score": 25.7,
   "level": "LOW",
   "level_name": "🟢 LOW 正常",
   "advice": "大盘环境正常, 可按既定策略(A/A+/B/C/D)正常筛选执行。",
   "exit_code": 0,
-  "weight_normalization": 1.163,
+  "weight_normalization": 1.087,
   "confluence_bonus": 0.0,
   "core_hot": [
     "trend"
@@ -36,18 +36,18 @@
       "skipped": false
     },
     "breadth": {
-      "score": 0.0,
+      "score": 21.7,
       "weight": 0.14,
-      "contribution": 0.0,
-      "detail": "未扫描(--fast)",
+      "contribution": 3.03,
+      "detail": "上涨家数占比46%(2567/5562, 涨停58/跌停20)",
       "skipped": false
     },
     "limit": {
-      "score": 0.0,
-      "weight": 0.0,
-      "contribution": 0.0,
-      "detail": "未扫描",
-      "skipped": true
+      "score": 45.0,
+      "weight": 0.06,
+      "contribution": 2.7,
+      "detail": "跌停20只 vs 涨停58只",
+      "skipped": false
     },
     "volume": {
       "score": 0.0,
@@ -78,10 +78,10 @@
       "skipped": true
     },
     "a50": {
-      "score": 12.0,
+      "score": 6.1,
       "weight": 0.1,
-      "contribution": 1.2,
-      "detail": "A50期指13912 -0.37%(领先指标)",
+      "contribution": 0.61,
+      "detail": "A50期指13923 -0.29%(领先指标)",
       "skipped": false
     },
     "hk": {
@@ -95,14 +95,14 @@
       "score": 0.0,
       "weight": 0.07,
       "contribution": 0.0,
-      "detail": "USDCNH6.7109(+0.03%), 美元指数101.5(-0.00%)",
+      "detail": "USDCNH6.7113(+0.04%), 美元指数101.5(+0.00%)",
       "skipped": false
     },
     "commodity": {
       "score": 0.0,
       "weight": 0.03,
       "contribution": 0.0,
-      "detail": "伦敦金+0.16% / 布油-0.15%",
+      "detail": "伦敦金+0.14% / 布油-0.12%",
       "skipped": false
     }
   },
@@ -131,18 +131,27 @@
     },
     "a50": {
       "code": "hf_CHA50CFD",
-      "price": 13911.7,
+      "price": 13923.13,
       "date": "2026-10-01",
       "prev": 13963.0,
       "high": 13985.0,
-      "low": 13885.0,
+      "low": 13884.0,
       "open": 13963.0
     },
     "usdcnh": {
-      "price_raw": 67109,
+      "price_raw": 67113,
       "prev_raw": 67089,
-      "chg_pct": 0.029811146387626053
+      "chg_pct": 0.035773375665160145
     },
-    "breadth": null
+    "breadth": {
+      "valid": 5562,
+      "up": 2567,
+      "down": 2824,
+      "flat": 171,
+      "up_pct": 46.15,
+      "down_pct": 50.77,
+      "limit_up": 58,
+      "limit_down": 20
+    }
   }
 }
