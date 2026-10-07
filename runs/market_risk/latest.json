@@ -1,7 +1,7 @@
 {
   "strategy": "E",
   "mode": "preopen_forecast",
-  "run_at": "2026-10-07 09:26:10",
+  "run_at": "2026-10-07 09:38:00",
   "trade_date": "2026-10-07",
   "total_score": 18.9,
   "level": "LOW",
@@ -81,28 +81,28 @@
       "score": 0.0,
       "weight": 0.1,
       "contribution": 0.0,
-      "detail": "A50期指13869 +0.10%(领先指标)",
+      "detail": "A50期指13890 +0.24%(领先指标)",
       "skipped": false
     },
     "hk": {
       "score": 0.0,
       "weight": 0.05,
       "contribution": 0.0,
-      "detail": "恒指+0.0% 恒科+0.0%",
+      "detail": "恒指-0.5% 恒科-0.3%",
       "skipped": false
     },
     "fx": {
       "score": 0.0,
       "weight": 0.07,
       "contribution": 0.0,
-      "detail": "USDCNH6.7037(+0.03%), 美元指数102.0(+0.00%)",
+      "detail": "USDCNH6.7029(+0.02%), 美元指数102.0(+0.00%)",
       "skipped": false
     },
     "commodity": {
       "score": 0.0,
       "weight": 0.03,
       "contribution": 0.0,
-      "detail": "伦敦金-0.22% / 布油+1.05%",
+      "detail": "伦敦金-0.15% / 布油+0.97%",
       "skipped": false
     }
   },
@@ -131,17 +131,17 @@
     },
     "a50": {
       "code": "hf_CHA50CFD",
-      "price": 13869.2,
+      "price": 13889.8,
       "date": "2026-10-07",
       "prev": 13856.0,
-      "high": 13901.0,
+      "high": 13922.0,
       "low": 13844.0,
       "open": 13863.0
     },
     "usdcnh": {
-      "price_raw": 67037,
+      "price_raw": 67029,
       "prev_raw": 67016,
-      "chg_pct": 0.03133580040586281
+      "chg_pct": 0.019398352632205018
     },
     "breadth": null
   }
