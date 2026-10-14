@@ -1,9 +1,9 @@
 {
   "strategy": "E",
   "mode": "preopen_forecast",
-  "run_at": "2026-10-14 09:26:17",
+  "run_at": "2026-10-14 09:38:10",
   "trade_date": "2026-10-14",
-  "total_score": 21.3,
+  "total_score": 24.1,
   "level": "LOW",
   "level_name": "🟢 LOW 正常",
   "advice": "大盘环境正常, 可按既定策略(A/A+/B/C/D)正常筛选执行。",
@@ -78,31 +78,31 @@
       "skipped": true
     },
     "a50": {
-      "score": 10.9,
+      "score": 35.4,
       "weight": 0.1,
-      "contribution": 1.09,
-      "detail": "A50期指13665 -0.35%(领先指标)",
+      "contribution": 3.54,
+      "detail": "A50期指13618 -0.70%(领先指标)",
       "skipped": false
     },
     "hk": {
       "score": 0.0,
       "weight": 0.05,
       "contribution": 0.0,
-      "detail": "恒指+0.0% 恒科+0.0%",
+      "detail": "恒指-0.3% 恒科-0.0%",
       "skipped": false
     },
     "fx": {
       "score": 0.0,
       "weight": 0.07,
       "contribution": 0.0,
-      "detail": "USDCNH6.6932(+0.00%), 美元指数102.2(-0.02%)",
+      "detail": "USDCNH6.6935(+0.01%), 美元指数102.2(-0.04%)",
       "skipped": false
     },
     "commodity": {
       "score": 0.0,
       "weight": 0.03,
       "contribution": 0.0,
-      "detail": "伦敦金+0.16% / 布油+1.18%",
+      "detail": "伦敦金-0.14% / 布油+1.24%",
       "skipped": false
     }
   },
@@ -110,13 +110,13 @@
     "sse": {
       "name": "上证指数",
       "code": "000001",
-      "price": 3790.63,
+      "price": 3788.51,
       "prev": 3800.86,
       "open": 3790.63,
-      "chg_pct": -0.27,
-      "high": 3790.63,
-      "low": 3790.63,
-      "amount_wan": 498595.0
+      "chg_pct": -0.32,
+      "high": 3797.58,
+      "low": 3786.21,
+      "amount_wan": 8586093.0
     },
     "nasdaq": {
       "name": "纳斯达克",
@@ -131,17 +131,17 @@
     },
     "a50": {
       "code": "hf_CHA50CFD",
-      "price": 13664.6,
+      "price": 13617.52,
       "date": "2026-10-14",
       "prev": 13713.0,
       "high": 13743.0,
-      "low": 13660.0,
+      "low": 13612.0,
       "open": 13713.0
     },
     "usdcnh": {
-      "price_raw": 66932,
+      "price_raw": 66935,
       "prev_raw": 66930,
-      "chg_pct": 0.0029881966233435975
+      "chg_pct": 0.007470491558336789
     },
     "breadth": null
   }
