@@ -1,9 +1,9 @@
 {
   "strategy": "E",
   "mode": "preopen_forecast",
-  "run_at": "2026-10-19 09:25:48",
+  "run_at": "2026-10-19 09:37:44",
   "trade_date": "2026-10-19",
-  "total_score": 49.1,
+  "total_score": 47.2,
   "level": "ELEVATED",
   "level_name": "🟡 ELEVATED 警惕",
   "advice": "大盘转弱, 新开仓降仓(单票≤25%), 收紧止损至-2%, 高位连板股回避。",
@@ -37,17 +37,17 @@
       "skipped": false
     },
     "breadth": {
-      "score": 100.0,
+      "score": 79.1,
       "weight": 0.14,
-      "contribution": 14.0,
-      "detail": "上涨家数占比14%(761/5497, 涨停12/跌停2)",
+      "contribution": 11.08,
+      "detail": "上涨家数占比31%(1577/5149, 涨停19/跌停7)",
       "skipped": false
     },
     "limit": {
-      "score": 0.0,
+      "score": 20.0,
       "weight": 0.06,
-      "contribution": 0.0,
-      "detail": "跌停2只 vs 涨停12只",
+      "contribution": 1.2,
+      "detail": "跌停7只 vs 涨停19只",
       "skipped": false
     },
     "volume": {
@@ -82,7 +82,7 @@
       "score": 0.0,
       "weight": 0.1,
       "contribution": 0.0,
-      "detail": "A50期指13341 +0.01%(领先指标)",
+      "detail": "A50期指13368 +0.21%(领先指标)",
       "skipped": false
     },
     "hk": {
@@ -96,14 +96,14 @@
       "score": 0.0,
       "weight": 0.07,
       "contribution": 0.0,
-      "detail": "USDCNH6.6840(-0.03%), 美元指数101.8(+0.00%)",
+      "detail": "USDCNH6.6849(-0.02%), 美元指数101.8(+0.00%)",
       "skipped": false
     },
     "commodity": {
       "score": 18.0,
       "weight": 0.03,
       "contribution": 0.54,
-      "detail": "伦敦金+0.11% / 布油-1.46%",
+      "detail": "伦敦金+0.37% / 布油-1.64%",
       "skipped": false
     }
   },
@@ -111,13 +111,13 @@
     "sse": {
       "name": "上证指数",
       "code": "000001",
-      "price": 3694.12,
+      "price": 3704.79,
       "prev": 3716.28,
       "open": 3694.12,
-      "chg_pct": -0.6,
-      "high": 3694.12,
-      "low": 3694.12,
-      "amount_wan": 593449.0
+      "chg_pct": -0.31,
+      "high": 3714.03,
+      "low": 3692.29,
+      "amount_wan": 9326121.0
     },
     "nasdaq": {
       "name": "纳斯达克",
@@ -132,27 +132,27 @@
     },
     "a50": {
       "code": "hf_CHA50CFD",
-      "price": 13341.2,
+      "price": 13367.5,
       "date": "2026-10-19",
       "prev": 13340.0,
-      "high": 13379.0,
+      "high": 13412.0,
       "low": 13267.0,
       "open": 13339.0
     },
     "usdcnh": {
-      "price_raw": 66840,
+      "price_raw": 66849,
       "prev_raw": 66860,
-      "chg_pct": -0.029913251570445887
+      "chg_pct": -0.016452288363744128
     },
     "breadth": {
-      "valid": 5497,
-      "up": 761,
-      "down": 4290,
-      "flat": 446,
-      "up_pct": 13.84,
-      "down_pct": 78.04,
-      "limit_up": 12,
-      "limit_down": 2
+      "valid": 5149,
+      "up": 1577,
+      "down": 3347,
+      "flat": 225,
+      "up_pct": 30.63,
+      "down_pct": 65.0,
+      "limit_up": 19,
+      "limit_down": 7
     }
   }
 }
