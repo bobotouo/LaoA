@@ -1,7 +1,7 @@
 {
   "strategy": "E",
   "mode": "preopen_forecast",
-  "run_at": "2026-11-09 09:25:49",
+  "run_at": "2026-11-09 09:37:48",
   "trade_date": "2026-11-09",
   "total_score": 20.5,
   "level": "LOW",
@@ -39,14 +39,14 @@
       "score": 0.0,
       "weight": 0.14,
       "contribution": 0.0,
-      "detail": "上涨家数占比87%(4817/5523, 涨停12/跌停1)",
+      "detail": "上涨家数占比76%(3932/5190, 涨停33/跌停1)",
       "skipped": false
     },
     "limit": {
       "score": 0.0,
       "weight": 0.06,
       "contribution": 0.0,
-      "detail": "跌停1只 vs 涨停12只",
+      "detail": "跌停1只 vs 涨停33只",
       "skipped": false
     },
     "volume": {
@@ -81,28 +81,28 @@
       "score": 0.0,
       "weight": 0.1,
       "contribution": 0.0,
-      "detail": "A50期指12823 +0.56%(领先指标)",
+      "detail": "A50期指12822 +0.55%(领先指标)",
       "skipped": false
     },
     "hk": {
       "score": 0.0,
       "weight": 0.05,
       "contribution": 0.0,
-      "detail": "恒指+0.0% 恒科+0.0%",
+      "detail": "恒指+0.6% 恒科+1.0%",
       "skipped": false
     },
     "fx": {
       "score": 0.0,
       "weight": 0.07,
       "contribution": 0.0,
-      "detail": "USDCNH6.6720(-0.03%), 美元指数102.1(-0.11%)",
+      "detail": "USDCNH6.6726(-0.02%), 美元指数102.2(-0.09%)",
       "skipped": false
     },
     "commodity": {
       "score": 45.0,
       "weight": 0.03,
       "contribution": 1.35,
-      "detail": "伦敦金+1.11% / 布油-1.05%",
+      "detail": "伦敦金+0.97% / 布油-0.99%",
       "skipped": false
     }
   },
@@ -110,13 +110,13 @@
     "sse": {
       "name": "上证指数",
       "code": "000001",
-      "price": 3659.02,
+      "price": 3656.87,
       "prev": 3649.18,
       "open": 3659.02,
-      "chg_pct": 0.27,
-      "high": 3659.02,
-      "low": 3659.02,
-      "amount_wan": 571101.0
+      "chg_pct": 0.21,
+      "high": 3662.74,
+      "low": 3653.05,
+      "amount_wan": 10182753.0
     },
     "nasdaq": {
       "name": "纳斯达克",
@@ -131,7 +131,7 @@
     },
     "a50": {
       "code": "hf_CHA50CFD",
-      "price": 12823.0,
+      "price": 12821.68,
       "date": "2026-11-09",
       "prev": 12752.0,
       "high": 12869.0,
@@ -139,18 +139,18 @@
       "open": 12756.0
     },
     "usdcnh": {
-      "price_raw": 66720,
+      "price_raw": 66726,
       "prev_raw": 66738,
-      "chg_pct": -0.026971140879261668
+      "chg_pct": -0.017980760586178146
     },
     "breadth": {
-      "valid": 5523,
-      "up": 4817,
-      "down": 428,
-      "flat": 278,
-      "up_pct": 87.22,
-      "down_pct": 7.75,
-      "limit_up": 12,
+      "valid": 5190,
+      "up": 3932,
+      "down": 1024,
+      "flat": 234,
+      "up_pct": 75.76,
+      "down_pct": 19.73,
+      "limit_up": 33,
       "limit_down": 1
     }
   }
