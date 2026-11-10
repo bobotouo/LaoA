@@ -1,7 +1,7 @@
 {
   "strategy": "E",
   "mode": "preopen_forecast",
-  "run_at": "2026-11-10 09:25:51",
+  "run_at": "2026-11-10 09:38:03",
   "trade_date": "2026-11-10",
   "total_score": 15.5,
   "level": "LOW",
@@ -39,14 +39,14 @@
       "score": 0.0,
       "weight": 0.14,
       "contribution": 0.0,
-      "detail": "上涨家数占比88%(4827/5516, 涨停10/跌停0)",
+      "detail": "上涨家数占比78%(4002/5144, 涨停17/跌停0)",
       "skipped": false
     },
     "limit": {
       "score": 0.0,
       "weight": 0.06,
       "contribution": 0.0,
-      "detail": "跌停0只 vs 涨停10只",
+      "detail": "跌停0只 vs 涨停17只",
       "skipped": false
     },
     "volume": {
@@ -81,28 +81,28 @@
       "score": 0.0,
       "weight": 0.1,
       "contribution": 0.0,
-      "detail": "A50期指13023 +0.90%(领先指标)",
+      "detail": "A50期指12955 +0.38%(领先指标)",
       "skipped": false
     },
     "hk": {
       "score": 0.0,
       "weight": 0.05,
       "contribution": 0.0,
-      "detail": "恒指+0.0% 恒科+0.0%",
+      "detail": "恒指+0.7% 恒科+0.8%",
       "skipped": false
     },
     "fx": {
       "score": 0.0,
       "weight": 0.07,
       "contribution": 0.0,
-      "detail": "USDCNH6.6686(-0.01%), 美元指数101.7(-0.02%)",
+      "detail": "USDCNH6.6686(-0.01%), 美元指数101.7(-0.00%)",
       "skipped": false
     },
     "commodity": {
       "score": 20.0,
       "weight": 0.03,
       "contribution": 0.6,
-      "detail": "伦敦金+0.65% / 布油-0.47%",
+      "detail": "伦敦金+0.61% / 布油-0.72%",
       "skipped": false
     }
   },
@@ -110,13 +110,13 @@
     "sse": {
       "name": "上证指数",
       "code": "000001",
-      "price": 3682.04,
+      "price": 3673.74,
       "prev": 3660.79,
       "open": 3682.04,
-      "chg_pct": 0.58,
-      "high": 3682.04,
-      "low": 3682.04,
-      "amount_wan": 720537.0
+      "chg_pct": 0.35,
+      "high": 3683.73,
+      "low": 3673.19,
+      "amount_wan": 11135862.0
     },
     "nasdaq": {
       "name": "纳斯达克",
@@ -131,7 +131,7 @@
     },
     "a50": {
       "code": "hf_CHA50CFD",
-      "price": 13022.51,
+      "price": 12955.29,
       "date": "2026-11-10",
       "prev": 12906.0,
       "high": 13059.0,
@@ -144,13 +144,13 @@
       "chg_pct": -0.010495854137615446
     },
     "breadth": {
-      "valid": 5516,
-      "up": 4827,
-      "down": 483,
-      "flat": 206,
-      "up_pct": 87.51,
-      "down_pct": 8.76,
-      "limit_up": 10,
+      "valid": 5144,
+      "up": 4002,
+      "down": 923,
+      "flat": 219,
+      "up_pct": 77.8,
+      "down_pct": 17.94,
+      "limit_up": 17,
       "limit_down": 0
     }
   }
