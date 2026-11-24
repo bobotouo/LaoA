@@ -1,0 +1,157 @@
+{
+  "strategy": "E",
+  "mode": "preopen_forecast",
+  "run_at": "2026-11-24 09:37:44",
+  "trade_date": "2026-11-24",
+  "total_score": 20.2,
+  "level": "LOW",
+  "level_name": "🟢 LOW 正常",
+  "advice": "大盘环境正常, 可按既定策略(A/A+/B/C/D)正常筛选执行。",
+  "exit_code": 0,
+  "weight_normalization": 1.087,
+  "confluence_bonus": 0.0,
+  "core_hot": [
+    "trend"
+  ],
+  "factors": {
+    "trend": {
+      "score": 100.0,
+      "weight": 0.12,
+      "contribution": 12.0,
+      "detail": "上证3539 <MA10/<MA20/<MA60/MA10<MA20/MA20下行",
+      "skipped": false
+    },
+    "momentum": {
+      "score": 14.6,
+      "weight": 0.08,
+      "contribution": 1.17,
+      "detail": "5日-1.8% / 20日-4.3%",
+      "skipped": false
+    },
+    "drawdown": {
+      "score": 47.1,
+      "weight": 0.07,
+      "contribution": 3.3,
+      "detail": "距20日高点-4.6%",
+      "skipped": false
+    },
+    "breadth": {
+      "score": 0.0,
+      "weight": 0.14,
+      "contribution": 0.0,
+      "detail": "上涨家数占比92%(4742/5168, 涨停46/跌停7)",
+      "skipped": false
+    },
+    "limit": {
+      "score": 20.0,
+      "weight": 0.06,
+      "contribution": 1.2,
+      "detail": "跌停7只 vs 涨停46只",
+      "skipped": false
+    },
+    "volume": {
+      "score": 0.0,
+      "weight": 0.04,
+      "contribution": 0.0,
+      "detail": "量能比5日均量1.14x, 指数+0.1%",
+      "skipped": false
+    },
+    "volatility": {
+      "score": 8.1,
+      "weight": 0.04,
+      "contribution": 0.32,
+      "detail": "5日均振幅1.22%(基线1.28), 跳空0.86%",
+      "skipped": false
+    },
+    "overnight_us": {
+      "score": 0.0,
+      "weight": 0.12,
+      "contribution": 0.0,
+      "detail": "纳指+6.5% 道指+3.0% 标普+4.7%",
+      "skipped": false
+    },
+    "vix": {
+      "score": 0.0,
+      "weight": 0.0,
+      "contribution": 0.0,
+      "detail": "无新鲜数据(自动剔除)",
+      "skipped": true
+    },
+    "a50": {
+      "score": 0.0,
+      "weight": 0.1,
+      "contribution": 0.0,
+      "detail": "A50期指12817 +1.33%(领先指标)",
+      "skipped": false
+    },
+    "hk": {
+      "score": 0.0,
+      "weight": 0.05,
+      "contribution": 0.0,
+      "detail": "恒指+1.1% 恒科+2.0%",
+      "skipped": false
+    },
+    "fx": {
+      "score": 0.0,
+      "weight": 0.07,
+      "contribution": 0.0,
+      "detail": "USDCNH6.6630(-0.05%), 美元指数104.2(-0.11%)",
+      "skipped": false
+    },
+    "commodity": {
+      "score": 20.0,
+      "weight": 0.03,
+      "contribution": 0.6,
+      "detail": "伦敦金+0.64% / 布油-0.30%",
+      "skipped": false
+    }
+  },
+  "context": {
+    "sse": {
+      "name": "上证指数",
+      "code": "000001",
+      "price": 3578.42,
+      "prev": 3538.95,
+      "open": 3567.84,
+      "chg_pct": 1.12,
+      "high": 3579.37,
+      "low": 3558.73,
+      "amount_wan": 14295132.0
+    },
+    "nasdaq": {
+      "name": "纳斯达克",
+      "code": ".IXIC",
+      "price": 24089.56,
+      "prev": 22617.73,
+      "open": 24269.75,
+      "chg_pct": 6.51,
+      "high": 24353.65,
+      "low": 23794.96,
+      "amount_wan": 231691977412405.0
+    },
+    "a50": {
+      "code": "hf_CHA50CFD",
+      "price": 12816.52,
+      "date": "2026-11-24",
+      "prev": 12648.0,
+      "high": 12857.0,
+      "low": 12622.0,
+      "open": 12644.0
+    },
+    "usdcnh": {
+      "price_raw": 66630,
+      "prev_raw": 66663,
+      "chg_pct": -0.049502722649741315
+    },
+    "breadth": {
+      "valid": 5168,
+      "up": 4742,
+      "down": 382,
+      "flat": 44,
+      "up_pct": 91.76,
+      "down_pct": 7.39,
+      "limit_up": 46,
+      "limit_down": 7
+    }
+  }
+}
