@@ -1,12 +1,12 @@
 {
   "strategy": "E",
   "mode": "preopen_forecast",
-  "run_at": "2026-11-26 09:37:37",
-  "trade_date": "2026-11-26",
-  "total_score": 34.4,
-  "level": "ELEVATED",
-  "level_name": "🟡 ELEVATED 警惕",
-  "advice": "大盘转弱, 新开仓降仓(单票≤25%), 收紧止损至-2%, 高位连板股回避。",
+  "run_at": "2026-11-27 09:26:30",
+  "trade_date": "2026-11-27",
+  "total_score": 25.2,
+  "level": "LOW",
+  "level_name": "🟢 LOW 正常",
+  "advice": "大盘环境正常, 可按既定策略(A/A+/B/C/D)正常筛选执行。",
   "exit_code": 0,
   "weight_normalization": 1.087,
   "confluence_bonus": 0.0,
@@ -18,49 +18,49 @@
       "score": 100.0,
       "weight": 0.12,
       "contribution": 12.0,
-      "detail": "上证3476 <MA10/<MA20/<MA60/MA10<MA20/MA20下行",
+      "detail": "上证3477 <MA10/<MA20/<MA60/MA10<MA20/MA20下行",
       "skipped": false
     },
     "momentum": {
-      "score": 37.2,
+      "score": 30.8,
       "weight": 0.08,
-      "contribution": 2.97,
-      "detail": "5日-3.1% / 20日-5.6%",
+      "contribution": 2.46,
+      "detail": "5日-2.8% / 20日-4.8%",
       "skipped": false
     },
     "drawdown": {
-      "score": 70.5,
+      "score": 70.3,
       "weight": 0.07,
-      "contribution": 4.93,
+      "contribution": 4.92,
       "detail": "距20日高点-6.1%",
       "skipped": false
     },
     "breadth": {
-      "score": 48.6,
+      "score": 0.0,
       "weight": 0.14,
-      "contribution": 6.81,
-      "detail": "上涨家数占比39%(2025/5210, 涨停23/跌停20)",
+      "contribution": 0.0,
+      "detail": "上涨家数占比62%(3329/5410, 涨停17/跌停6)",
       "skipped": false
     },
     "limit": {
-      "score": 45.0,
+      "score": 20.0,
       "weight": 0.06,
-      "contribution": 2.7,
-      "detail": "跌停20只 vs 涨停23只",
+      "contribution": 1.2,
+      "detail": "跌停6只 vs 涨停17只",
       "skipped": false
     },
     "volume": {
-      "score": 10.7,
+      "score": 0.0,
       "weight": 0.04,
-      "contribution": 0.43,
-      "detail": "量能比5日均量1.01x, 指数-2.0%",
+      "contribution": 0.0,
+      "detail": "量能比5日均量0.95x, 指数+0.0%",
       "skipped": false
     },
     "volatility": {
-      "score": 14.4,
+      "score": 16.0,
       "weight": 0.04,
-      "contribution": 0.57,
-      "detail": "5日均振幅1.38%(基线1.30), 跳空0.73%",
+      "contribution": 0.64,
+      "detail": "5日均振幅1.43%(基线1.32), 跳空0.39%",
       "skipped": false
     },
     "overnight_us": {
@@ -81,28 +81,28 @@
       "score": 0.0,
       "weight": 0.1,
       "contribution": 0.0,
-      "detail": "A50期指12499 +0.35%(领先指标)",
+      "detail": "A50期指12580 +0.54%(领先指标)",
       "skipped": false
     },
     "hk": {
       "score": 0.0,
       "weight": 0.05,
       "contribution": 0.0,
-      "detail": "恒指+1.2% 恒科+2.3%",
+      "detail": "恒指+0.0% 恒科+0.0%",
       "skipped": false
     },
     "fx": {
       "score": 0.0,
       "weight": 0.07,
       "contribution": 0.0,
-      "detail": "USDCNH6.6684(+0.01%), 美元指数103.7(+0.00%)",
+      "detail": "美元指数103.8(+0.00%)",
       "skipped": false
     },
     "commodity": {
-      "score": 20.0,
+      "score": 45.0,
       "weight": 0.03,
-      "contribution": 0.6,
-      "detail": "伦敦金+0.62% / 布油+0.15%",
+      "contribution": 1.35,
+      "detail": "伦敦金+0.99% / 布油+0.42%",
       "skipped": false
     }
   },
@@ -110,13 +110,13 @@
     "sse": {
       "name": "上证指数",
       "code": "000001",
-      "price": 3477.42,
-      "prev": 3476.47,
-      "open": 3490.14,
-      "chg_pct": 0.03,
-      "high": 3491.01,
-      "low": 3477.04,
-      "amount_wan": 8107398.0
+      "price": 3482.38,
+      "prev": 3476.88,
+      "open": 3482.38,
+      "chg_pct": 0.16,
+      "high": 3482.38,
+      "low": 3482.38,
+      "amount_wan": 473088.0
     },
     "nasdaq": {
       "name": "纳斯达克",
@@ -131,27 +131,23 @@
     },
     "a50": {
       "code": "hf_CHA50CFD",
-      "price": 12499.2,
-      "date": "2026-11-26",
-      "prev": 12455.0,
-      "high": 12582.0,
-      "low": 12336.0,
-      "open": 12459.0
+      "price": 12580.2,
+      "date": "2026-11-27",
+      "prev": 12513.0,
+      "high": 12609.0,
+      "low": 12477.0,
+      "open": 12523.0
     },
-    "usdcnh": {
-      "price_raw": 66684,
-      "prev_raw": 66675,
-      "chg_pct": 0.013498312710913396
-    },
+    "usdcnh": null,
     "breadth": {
-      "valid": 5210,
-      "up": 2025,
-      "down": 2828,
-      "flat": 357,
-      "up_pct": 38.87,
-      "down_pct": 54.28,
-      "limit_up": 23,
-      "limit_down": 20
+      "valid": 5410,
+      "up": 3329,
+      "down": 1214,
+      "flat": 867,
+      "up_pct": 61.53,
+      "down_pct": 22.44,
+      "limit_up": 17,
+      "limit_down": 6
     }
   }
 }
